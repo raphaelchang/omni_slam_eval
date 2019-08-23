@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>omni_slam_eval</name>
+  <version>1.0.0</version>
+  <description>Evaluates various components of the SLAM pipeline on omni images.</description>
+
+  <maintainer email="raphc@mit.edu">Raphael Chang</maintainer>
+  <author>Raphael Chang</author>
+  <license>MIT</license>
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>roscpp</depend>
+  <depend>cv_bridge</depend>
+  <depend>sensor_msgs</depend>
+  <depend>image_transport</depend>
+  <depend>tf2_ros</depend>
+</package>

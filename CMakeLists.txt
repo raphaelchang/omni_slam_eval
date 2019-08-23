@@ -1,0 +1,56 @@
+cmake_minimum_required(VERSION 2.8.3)
+
+project(omni_slam_eval)
+
+set(CMAKE_VERBOSE_MAKEFILE FALSE)
+
+add_definitions("-std=c++11")
+if (NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
+endif (NOT CMAKE_BUILD_TYPE)
+
+# find catkin dependencies
+set(REQ_CATKIN_PKGS
+  roscpp
+  cv_bridge
+  sensor_msgs
+  image_transport
+  tf2_ros
+)
+
+find_package(catkin REQUIRED COMPONENTS ${REQ_CATKIN_PKGS})
+
+find_package(Eigen3 REQUIRED)
+include_directories(${EIGEN3_INCLUDE_DIR})
+
+catkin_package(
+ INCLUDE_DIRS src
+ LIBRARIES ${PROJECT_NAME}
+ CATKIN_DEPENDS ${REQ_CATKIN_PKGS}
+ DEPENDS
+)
+
+include_directories(
+  src
+  ${catkin_INCLUDE_DIRS}
+)
+
+add_library(omni_feature_eval_lib
+  src/feature/track.cc
+  src/camera/perspective.cc
+  src/camera/double_sphere.cc
+)
+
+# add_executable(omni_feature_eval_node
+#     src/omni_feature_eval_node.cc
+# )
+
+target_link_libraries( omni_feature_eval_lib
+  ${catkin_LIBRARIES}
+)
+
+# install(TARGETS omni_feature_eval_node
+#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
