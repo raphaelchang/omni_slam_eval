@@ -23,6 +23,10 @@ find_package(catkin REQUIRED COMPONENTS ${REQ_CATKIN_PKGS})
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
+FIND_PACKAGE(OpenCV 3.4 REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
+link_directories(${OpenCV_LIBRARIES_DIRS})
+
 catkin_package(
  INCLUDE_DIRS src
  LIBRARIES ${PROJECT_NAME}
@@ -36,9 +40,13 @@ include_directories(
 )
 
 add_library(omni_feature_eval_lib
-  src/feature/track.cc
+  src/data/frame.cc
+  src/data/feature.cc
+  src/data/landmark.cc
   src/camera/perspective.cc
   src/camera/double_sphere.cc
+  src/feature/tracker.cc
+  src/util/tf_util.cc
 )
 
 # add_executable(omni_feature_eval_node

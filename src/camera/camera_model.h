@@ -18,8 +18,8 @@ public:
     {
         name_ = name;
     }
-    virtual bool ProjectToImage(const Vector3d &bearing, Vector2d &pixel) = 0;
-    virtual bool UnprojectToBearing(const Vector2d &pixel, Vector3d &bearing) = 0;
+    virtual bool ProjectToImage(const Vector3d &bearing, Vector2d &pixel) const = 0;
+    virtual bool UnprojectToBearing(const Vector2d &pixel, Vector3d &bearing) const = 0;
     virtual double GetFOV() = 0;
 
 private:
