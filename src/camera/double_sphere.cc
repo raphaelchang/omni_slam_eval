@@ -46,7 +46,7 @@ bool DoubleSphere::ProjectToImage(const Vector3d &bearing, Vector2d &pixel)
     Vector3d bearing_h;
     bearing_h << x, y, (alpha_ * d2 + (1 - alpha_) * (chi_ * d1 + z));
     Vector3d pixel_h = cameraMat_ * bearing_h;
-    pixel = pixel_h.head<2>() / pixel_h(2);
+    pixel = pixel_h.hnormalized();
     if (pixel(0) > 2 * cx_ || pixel(0) < 0 || pixel(1) > 2 * cy_ || pixel(1) < 0)
     {
         return false;

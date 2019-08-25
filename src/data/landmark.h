@@ -15,7 +15,7 @@ namespace data
 class Landmark
 {
 public:
-    Landmark(const int id);
+    Landmark();
     void AddObservation(Feature obs);
     std::vector<Feature>& GetObservations();
     bool IsObservedInFrame(const int frame_id);
@@ -26,7 +26,6 @@ public:
     Vector3d GetGroundTruth();
     bool HasGroundTruth();
 private:
-    const int id_;
     std::vector<Feature> obs_;
     std::map<int, int> idToIndex_;
     Vector3d groundTruth_;

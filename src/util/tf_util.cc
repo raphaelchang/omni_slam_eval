@@ -23,8 +23,7 @@ Matrix<double, 3, 4> TFUtil::InversePoseMatrix(Matrix<double, 3, 4> poseMat)
 
 Vector3d TFUtil::TransformPoint(Matrix<double, 3, 4> tf, Vector3d pt)
 {
-    Vector4d pt_h;
-    pt_h << pt(0), pt(1), pt(2), 1;
+    Vector4d pt_h = pt.homogeneous();
     return tf * pt_h;
 }
 

@@ -5,8 +5,7 @@ namespace omni_slam
 namespace data
 {
 
-Landmark::Landmark(const int id)
-    : id_(id)
+Landmark::Landmark()
 {
 }
 
@@ -63,7 +62,7 @@ Feature* Landmark::GetObservationByFrameID(const int frame_id)
 {
     if (idToIndex_.find(frame_id) == idToIndex_.end())
     {
-        return NULL;
+        return nullptr;
     }
     return &obs_[idToIndex_[frame_id]];
 }

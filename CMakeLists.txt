@@ -46,6 +46,7 @@ add_library(omni_feature_eval_lib
   src/camera/perspective.cc
   src/camera/double_sphere.cc
   src/feature/tracker.cc
+  src/feature/detector.cc
   src/util/tf_util.cc
 )
 

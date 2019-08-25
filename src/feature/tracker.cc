@@ -13,7 +13,7 @@ Tracker::Tracker(const int window_size, const int num_scales, const float delta_
     errThresh_(err_thresh),
     deltaPixErrThresh_(delta_pix_err_thresh),
     termCrit_(cv::TermCriteria::COUNT | cv::TermCriteria::EPS, term_count, term_eps),
-    prevFrame_(NULL)
+    prevFrame_(nullptr)
 {
 }
 
@@ -24,7 +24,7 @@ void Tracker::Init(data::Frame &init_frame)
 
 void Tracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_frame)
 {
-    if (prevFrame_ == NULL)
+    if (prevFrame_ ==  nullptr)
     {
         return;
     }
@@ -36,7 +36,7 @@ void Tracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_fra
     {
         data::Landmark &landmark = landmarks[i];
         data::Feature *feat;
-        if ((feat = landmark.GetObservationByFrameID(prev_id)) != NULL)
+        if ((feat = landmark.GetObservationByFrameID(prev_id)) != nullptr)
         {
             points_to_track.push_back(feat->GetKeypoint().pt);
             orig_kpt.push_back(feat->GetKeypoint());

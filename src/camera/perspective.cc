@@ -19,7 +19,7 @@ Perspective::Perspective(const double fx, const double fy, const double cx, cons
 bool Perspective::ProjectToImage(const Vector3d &bearing, Vector2d &pixel)
 {
     Vector3d pixel_h = cameraMat_ * bearing;
-    pixel = pixel_h.head<2>() / pixel_h(2);
+    pixel = pixel_h.hnormalized();
     if (pixel(0) > 2 * cx_ || pixel(0) < 0 || pixel(1) > 2 * cy_ || pixel(1) < 0)
     {
         return false;
