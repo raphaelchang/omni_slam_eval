@@ -14,8 +14,10 @@ class TFUtil
 {
 public:
     static Vector3d CameraFrameToWorldFrame(Vector3d cameraFramePt);
+    static Vector3d WorldFrameToCameraFrame(Vector3d worldFramePt);
     static Matrix<double, 3, 4> InversePoseMatrix(Matrix<double, 3, 4> poseMat);
     static Vector3d TransformPoint(Matrix<double, 3, 4> tf, Vector3d pt);
+    static Matrix<double, 3, 4> QuaternionTranslationToPoseMatrix(Quaterniond quat, Vector3d translation);
 };
 
 }

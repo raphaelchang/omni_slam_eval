@@ -115,8 +115,6 @@ class KLTTracker:
         cond = np.logical_and(cond, cond3)
         cond = np.logical_and(cond, cond4)
         mask[cond] = 255
-        # cv2.imshow("mask", mask)
-        # cv2.waitKey(0)
         return self.detector.detect(img, mask)
 
     def on_new_image(self, img, depth, pose):

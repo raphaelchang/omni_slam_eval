@@ -10,7 +10,7 @@ class Track:
     def triangulate(self):
         cost = np.zeros((4, 4))
         for ray, pose in zip(self.features, self.poses):
-            A = pose - np.dot(np.dot(ray, np.transpose(ray)),  pose)
+            A = pose - np.dot(np.dot(ray, np.transpose(ray)), pose)
             cost += np.dot(np.transpose(A), A)
         w, v = np.linalg.eig(cost)
         idx = np.argsort(w)

@@ -22,12 +22,14 @@ void Tracker::Init(data::Frame &init_frame)
     prevFrame_ = &init_frame;
 }
 
-void Tracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_frame)
+int Tracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_frame)
 {
     if (prevFrame_ ==  nullptr)
     {
-        return;
+        return 0;
     }
+    bool prevCompressed = prevFrame_->IsCompressed();
+    bool curCompressed = cur_frame.IsCompressed();
     int prev_id = prevFrame_->GetID();
     std::vector<cv::Point2f> points_to_track;
     std::vector<cv::KeyPoint> orig_kpt;
@@ -43,10 +45,15 @@ void Tracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_fra
             orig_inx.push_back(i);
         }
     }
+    if (points_to_track.size() == 0)
+    {
+        return 0;
+    }
     std::vector<cv::Point2f> results;
-    std::vector<char> status;
+    std::vector<unsigned char> status;
     std::vector<float> err;
-    cv::calcOpticalFlowPyrLK(prevFrame_->GetImage(), cur_frame.GetImage(), points_to_track, results, status, err, windowSize_, numScales_, termCrit_, 0, 0.001);
+    cv::calcOpticalFlowPyrLK(prevFrame_->GetImage(), cur_frame.GetImage(), points_to_track, results, status, err, windowSize_, numScales_, termCrit_, 0);
+    int numGood = 0;
     for (int i = 0; i < results.size(); i++)
     {
         data::Landmark &landmark = landmarks[orig_inx[i]];
@@ -54,7 +61,7 @@ void Tracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_fra
         {
             Vector2d pixel_gnd;
             Vector2d pixel_gnd_prev;
-            if (!cur_frame.GetCameraModel().ProjectToImage(util::TFUtil::TransformPoint(cur_frame.GetPose(), landmark.GetGroundTruth()), pixel_gnd) || !prevFrame_->GetCameraModel().ProjectToImage(util::TFUtil::TransformPoint(prevFrame_->GetPose(), landmark.GetGroundTruth()), pixel_gnd_prev))
+            if (!cur_frame.GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(cur_frame.GetInversePose(), landmark.GetGroundTruth())), pixel_gnd) || !prevFrame_->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(prevFrame_->GetInversePose(), landmark.GetGroundTruth())), pixel_gnd_prev))
             {
                 continue;
             }
@@ -77,9 +84,21 @@ void Tracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_fra
             cv::KeyPoint kpt(results[i], orig_kpt[i].size);
             data::Feature feat(cur_frame, kpt);
             landmark.AddObservation(feat);
+            numGood++;
         }
     }
+    if (prevCompressed)
+    {
+        prevFrame_->CompressImages();
+    }
+    if (curCompressed)
+    {
+        cur_frame.CompressImages();
+    }
+
     prevFrame_ = &cur_frame;
+
+    return numGood;
 }
 
 }

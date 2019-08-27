@@ -41,9 +41,14 @@ Vector3d Feature::GetWorldPoint()
     Vector2d pixelPt;
     pixelPt << kpt_.pt.x + 0.5, kpt_.pt.y + 0.5;
     frame_.GetCameraModel().UnprojectToBearing(pixelPt, cameraFramePt);
+    bool wasCompressed = frame_.IsCompressed();
     cameraFramePt *= frame_.GetDepthImage().at<double>((int)(kpt_.pt.y + 0.5), (int)(kpt_.pt.x + 0.5));
+    if (wasCompressed)
+    {
+        frame_.CompressImages();
+    }
     Vector3d worldFramePt = util::TFUtil::CameraFrameToWorldFrame(cameraFramePt);
-    return util::TFUtil::TransformPoint(util::TFUtil::InversePoseMatrix(frame_.GetPose()), worldFramePt);
+    return util::TFUtil::TransformPoint(frame_.GetPose(), worldFramePt);
 }
 
 bool Feature::HasWorldPoint()

@@ -20,7 +20,7 @@ DoubleSphere::DoubleSphere(const double fx, const double fy, const double cx, co
     fov_ = GetFOV();
 }
 
-bool DoubleSphere::ProjectToImage(const Vector3d &bearing, Vector2d &pixel)
+bool DoubleSphere::ProjectToImage(const Vector3d &bearing, Vector2d &pixel) const
 {
     double x = bearing(0);
     double y = bearing(1);
@@ -62,7 +62,7 @@ bool DoubleSphere::ProjectToImage(const Vector3d &bearing, Vector2d &pixel)
     return true;
 }
 
-bool DoubleSphere::UnprojectToBearing(const Vector2d &pixel, Vector3d &bearing)
+bool DoubleSphere::UnprojectToBearing(const Vector2d &pixel, Vector3d &bearing) const
 {
     double mx = (pixel(0) - cx_) / fx_;
     double my = (pixel(1) - cy_) / fy_;

@@ -16,6 +16,7 @@ set(REQ_CATKIN_PKGS
   sensor_msgs
   image_transport
   tf2_ros
+  rosbag
 )
 
 find_package(catkin REQUIRED COMPONENTS ${REQ_CATKIN_PKGS})
@@ -39,7 +40,7 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_library(omni_feature_eval_lib
+add_library(omni_slam_eval_lib
   src/data/frame.cc
   src/data/feature.cc
   src/data/landmark.cc
@@ -50,16 +51,17 @@ add_library(omni_feature_eval_lib
   src/util/tf_util.cc
 )
 
-# add_executable(omni_feature_eval_node
-#     src/omni_feature_eval_node.cc
-# )
-
-target_link_libraries( omni_feature_eval_lib
-  ${catkin_LIBRARIES}
+add_executable(omni_slam_eval_tracking_node
+    src/omni_slam_eval_tracking_node.cc
 )
 
-# install(TARGETS omni_feature_eval_node
-#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+target_link_libraries(omni_slam_eval_tracking_node omni_slam_eval_lib
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBS}
+)
+
+install(TARGETS omni_slam_eval_tracking_node
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)

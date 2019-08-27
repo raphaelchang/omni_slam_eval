@@ -16,7 +16,7 @@ Perspective::Perspective(const double fx, const double fy, const double cx, cons
     cameraMat_ << fx_, 0, cx_, 0, fy_, cy_, 0, 0, 1;
 }
 
-bool Perspective::ProjectToImage(const Vector3d &bearing, Vector2d &pixel)
+bool Perspective::ProjectToImage(const Vector3d &bearing, Vector2d &pixel) const
 {
     Vector3d pixel_h = cameraMat_ * bearing;
     pixel = pixel_h.hnormalized();
@@ -27,7 +27,7 @@ bool Perspective::ProjectToImage(const Vector3d &bearing, Vector2d &pixel)
     return true;
 }
 
-bool Perspective::UnprojectToBearing(const Vector2d &pixel, Vector3d &bearing)
+bool Perspective::UnprojectToBearing(const Vector2d &pixel, Vector3d &bearing) const
 {
     Vector3d pixel_h;
     double mx = (pixel(0) - cx_) / fx_;

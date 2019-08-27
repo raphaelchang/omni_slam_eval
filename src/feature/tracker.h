@@ -16,7 +16,7 @@ class Tracker
 public:
     Tracker(const int window_size, const int num_scales, const float delta_pix_err_thresh = 5., const float err_thresh = 20., const int term_count = 50, const double term_eps = 0.01);
     void Init(data::Frame &init_frame);
-    void Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_frame);
+    int Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_frame);
 
 private:
     cv::TermCriteria termCrit_;
