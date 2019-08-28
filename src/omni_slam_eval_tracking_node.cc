@@ -6,6 +6,7 @@
 #include "camera/double_sphere.h"
 #include "camera/perspective.h"
 #include "util/tf_util.h"
+#include "util/hdf_file.h"
 
 using namespace std;
 using namespace Eigen;
@@ -127,6 +128,7 @@ void TrackingNode::FrameCallback(const sensor_msgs::ImageConstPtr &image, const 
     tracker_->Track(landmarks_, frames_.back());
 
     int i = 0;
+    int numGood = 0;
     map<pair<int, int>, int> regionCount;
     int imsize = std::max(frames_.back().GetImage().rows, frames_.back().GetImage().cols);
     for (data::Landmark& landmark : landmarks_)
@@ -134,18 +136,6 @@ void TrackingNode::FrameCallback(const sensor_msgs::ImageConstPtr &image, const 
         data::Feature *obs;
         if ((obs = landmark.GetObservationByFrameID(frames_.back().GetID())) != nullptr)
         {
-            Vector2d pixel_gnd;
-            if (frames_.back().GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(frames_.back().GetInversePose(), landmark.GetGroundTruth())), pixel_gnd))
-            {
-                data::Feature *obsPrev = landmark.GetObservationByFrameID(next(frames_.rbegin())->GetID());
-                Vector2d pixel;
-                pixel << obs->GetKeypoint().pt.x, obs->GetKeypoint().pt.y;
-                double error = (pixel - pixel_gnd).norm();
-                cv::Scalar color(0, (int)(255 * (1 - error / 10)), (int)(255 * (error / 10)));
-                cv::line(visMask_, obsPrev->GetKeypoint().pt, obs->GetKeypoint().pt, color, 1);
-                cv::circle(cvImage->image, obs->GetKeypoint().pt, 1, color, -1);
-                cv::circle(cvImage->image, cv::Point2f(pixel_gnd(0), pixel_gnd(1)), 3, colors_[i], -1);
-            }
             double x = obs->GetKeypoint().pt.x - frames_.back().GetImage().cols / 2. + 0.5;
             double y = obs->GetKeypoint().pt.y - frames_.back().GetImage().rows / 2. + 0.5;
             double r = sqrt(x * x + y * y) / imsize;
@@ -159,10 +149,38 @@ void TrackingNode::FrameCallback(const sensor_msgs::ImageConstPtr &image, const 
                 regionCount[{rinx, tinx}] = 0;
             }
             regionCount[{rinx, tinx}]++;
+
+            Vector2d pixel_gnd;
+            if (frames_.back().GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(frames_.back().GetInversePose(), landmark.GetGroundTruth())), pixel_gnd))
+            {
+                data::Feature *obsPrev = landmark.GetObservationByFrameID(next(frames_.rbegin())->GetID());
+                Vector2d pixel;
+                pixel << obs->GetKeypoint().pt.x, obs->GetKeypoint().pt.y;
+                double error = (pixel - pixel_gnd).norm();
+                cv::Scalar color(0, (int)(255 * (1 - error / 10)), (int)(255 * (error / 10)));
+                cv::line(visMask_, obsPrev->GetKeypoint().pt, obs->GetKeypoint().pt, color, 1);
+                cv::circle(cvImage->image, obs->GetKeypoint().pt, 1, color, -1);
+                cv::circle(cvImage->image, cv::Point2f(pixel_gnd(0), pixel_gnd(1)), 3, colors_[i], -1);
+
+                double xg = pixel_gnd(0) - frames_.back().GetImage().cols / 2. + 0.5;
+                double yg = pixel_gnd(1) - frames_.back().GetImage().rows / 2. + 0.5;
+                double rg = sqrt(xg * xg + yg * yg) / imsize;
+                radErrors_.emplace_back(vector<double>{rg, error});
+                frameErrors_.emplace_back(vector<double>{(double)(frameNum_ - landmark.GetFirstFrameID()), (double)i, rg, error});
+            }
+            numGood++;
         }
         else if ((obs = landmark.GetObservationByFrameID(next(frames_.rbegin())->GetID())) != nullptr) // Failed in current frame
         {
-
+            Vector2d pixel_gnd;
+            if (frames_.back().GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(frames_.back().GetInversePose(), landmark.GetGroundTruth())), pixel_gnd))
+            {
+                double x = pixel_gnd(0) - frames_.back().GetImage().cols / 2. + 0.5;
+                double y = pixel_gnd(1) - frames_.back().GetImage().rows / 2. + 0.5;
+                double r = sqrt(x * x + y * y) / imsize;
+                failureRadDists_.push_back(r);
+            }
+            trackLengths_.push_back(frameNum_ - landmark.GetFirstFrameID() - 1);
         }
         i++;
     }
@@ -177,11 +195,30 @@ void TrackingNode::FrameCallback(const sensor_msgs::ImageConstPtr &image, const 
         }
     }
 
+    frameTrackCounts_.emplace_back(vector<double>{(double)frameNum_, (double)numGood});
+
     cvImage->image += visMask_;
     trackedImagePublisher_.publish(cvImage->toImageMsg());
 
     next(frames_.rbegin())->CompressImages();
     frameNum_++;
+}
+
+void TrackingNode::GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data)
+{
+    data["failures"] = {failureRadDists_};
+    data["radial_errors"] = radErrors_;
+    data["length_errors"] = frameErrors_;
+    data["track_counts"] = frameTrackCounts_;
+    for (data::Landmark& landmark : landmarks_)
+    {
+        data::Feature *obs;
+        if ((obs = landmark.GetObservationByFrameID(frames_.back().GetID())) != nullptr)
+        {
+            trackLengths_.push_back(frames_.back().GetID() - landmark.GetFirstFrameID());
+        }
+    }
+    data["track_lengths"] = {vector<double>(trackLengths_.begin(), trackLengths_.end())};
 }
 
 }
@@ -191,11 +228,21 @@ int main(int argc, char *argv[])
     ros::init(argc, argv, "omni_slam_eval_tracking_node");
     ros::NodeHandle nh("~");
     string bagFile;
+    string resultsFile;
     nh.param("bag_file", bagFile, string(""));
+    nh.param("results_file", resultsFile, string(""));
     if (bagFile == "")
     {
         omni_slam::TrackingNode node(true);
         ros::spin();
+        ROS_INFO("Saving results...");
+        map<string, vector<vector<double>>> results;
+        node.GetResultsData(results);
+        omni_slam::util::HDFFile out(resultsFile);
+        for (auto &dataset : results)
+        {
+            out.AddDataset(dataset.first, dataset.second);
+        }
     }
     else
     {
@@ -251,6 +298,19 @@ int main(int argc, char *argv[])
                 }
             }
         }
+
+        ROS_INFO("Saving results...");
+        map<string, vector<vector<double>>> results;
+        node.GetResultsData(results);
+        omni_slam::util::HDFFile out(resultsFile);
+        for (auto &dataset : results)
+        {
+            out.AddDataset(dataset.first, dataset.second);
+        }
+        map<string, double> cameraParams;
+        nh.getParam("camera_parameters", cameraParams);
+        out.AddAttribute("bag_file", bagFile);
+        out.AddAttributes(cameraParams);
     }
     return 0;
 }

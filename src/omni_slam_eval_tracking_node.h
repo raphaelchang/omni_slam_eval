@@ -28,6 +28,7 @@ public:
     TrackingNode(const ros::NodeHandle &nh, const ros::NodeHandle &nh_private, bool realtime);
     TrackingNode(bool realtime) : TrackingNode(ros::NodeHandle(), ros::NodeHandle("~"), realtime) {}
     void FrameCallback(const sensor_msgs::ImageConstPtr &image, const sensor_msgs::ImageConstPtr &depth_image, const geometry_msgs::PoseStamped::ConstPtr &pose);
+    void GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data);
 
 private:
     ros::NodeHandle nh_;
@@ -56,6 +57,12 @@ private:
     const std::vector<double> rs_{0, 0.1, 0.2, 0.3, 0.4, 0.5};
     const std::vector<double> ts_{-M_PI, -3 * M_PI / 4, -M_PI / 2, -M_PI / 4, 0, M_PI / 4, M_PI / 2, 3 * M_PI / 4, M_PI};
     int minFeaturesRegion_;
+
+    std::vector<std::vector<double>> radErrors_;
+    std::vector<std::vector<double>> frameErrors_;
+    std::vector<std::vector<double>> frameTrackCounts_;
+    std::vector<int> trackLengths_;
+    std::vector<double> failureRadDists_;
 };
 
 }

@@ -24,9 +24,13 @@ find_package(catkin REQUIRED COMPONENTS ${REQ_CATKIN_PKGS})
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
-FIND_PACKAGE(OpenCV 3.4 REQUIRED)
+find_package(OpenCV 3.4 REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 link_directories(${OpenCV_LIBRARIES_DIRS})
+
+find_package(HDF5 COMPONENTS C CXX HL REQUIRED)
+include_directories(${HDF5_INCLUDE_DIR})
+link_directories(${HDF5_LIBRARY_DIRS})
 
 catkin_package(
  INCLUDE_DIRS src
@@ -49,6 +53,7 @@ add_library(omni_slam_eval_lib
   src/feature/tracker.cc
   src/feature/detector.cc
   src/util/tf_util.cc
+  src/util/hdf_file.cc
 )
 
 add_executable(omni_slam_eval_tracking_node
@@ -58,6 +63,7 @@ add_executable(omni_slam_eval_tracking_node
 target_link_libraries(omni_slam_eval_tracking_node omni_slam_eval_lib
   ${catkin_LIBRARIES}
   ${OpenCV_LIBS}
+  ${HDF5_CXX_LIBRARIES}
 )
 
 install(TARGETS omni_slam_eval_tracking_node
