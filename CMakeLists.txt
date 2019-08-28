@@ -24,7 +24,7 @@ find_package(catkin REQUIRED COMPONENTS ${REQ_CATKIN_PKGS})
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
-find_package(OpenCV 3.4 REQUIRED)
+find_package(OpenCV 3.3 REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 link_directories(${OpenCV_LIBRARIES_DIRS})
 
@@ -53,6 +53,7 @@ add_library(omni_slam_eval_lib
   src/feature/tracker.cc
   src/feature/detector.cc
   src/util/tf_util.cc
+  src/util/math_util.cc
   src/util/hdf_file.cc
 )
 

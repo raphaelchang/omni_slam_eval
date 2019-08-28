@@ -1,4 +1,5 @@
 #include "detector.h"
+#include "util/math_util.h"
 
 namespace omni_slam
 {
@@ -202,15 +203,13 @@ int Detector::DetectInRadialRegion(data::Frame &frame, std::vector<data::Landmar
             double x = j - mask.cols / 2. + 0.5;
             double y = i - mask.rows / 2. + 0.5;
             double r = sqrt(x * x + y * y);
-            double t = atan2(y, x);
+            double t = util::MathUtil::FastAtan2(y, x);
             if (r >= start_r && r < end_r && t >= start_t && t < end_t)
             {
                 mask.at<unsigned char>(i, j) = 255;
             }
         }
     }
-    //cv::imshow("mask", mask);
-    //cv::waitKey(0);
     return DetectInRegion(frame, landmarks, mask);
 }
 

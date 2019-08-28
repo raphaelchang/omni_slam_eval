@@ -6,6 +6,7 @@
 #include "camera/double_sphere.h"
 #include "camera/perspective.h"
 #include "util/tf_util.h"
+#include "util/math_util.h"
 #include "util/hdf_file.h"
 
 using namespace std;
@@ -139,7 +140,7 @@ void TrackingNode::FrameCallback(const sensor_msgs::ImageConstPtr &image, const 
             double x = obs->GetKeypoint().pt.x - frames_.back().GetImage().cols / 2. + 0.5;
             double y = obs->GetKeypoint().pt.y - frames_.back().GetImage().rows / 2. + 0.5;
             double r = sqrt(x * x + y * y) / imsize;
-            double t = atan2(y, x);
+            double t = util::MathUtil::FastAtan2(y, x);
             vector<double>::const_iterator ri = upper_bound(rs_.begin(), rs_.end(), r);
             vector<double>::const_iterator ti = upper_bound(ts_.begin(), ts_.end(), t);
             int rinx = min((int)(ri - rs_.begin()), (int)(rs_.size() - 1)) - 1;
