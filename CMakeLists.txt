@@ -45,6 +45,7 @@ include_directories(
 )
 
 add_library(omni_slam_eval_lib
+  src/module/tracking_module.cc
   src/data/frame.cc
   src/data/feature.cc
   src/data/landmark.cc
@@ -57,17 +58,19 @@ add_library(omni_slam_eval_lib
   src/util/hdf_file.cc
 )
 
-add_executable(omni_slam_eval_tracking_node
-    src/omni_slam_eval_tracking_node.cc
+add_executable(omni_slam_tracking_eval_node
+    src/ros/tracking_eval.cc
+    src/ros/eval_base.cc
+    src/omni_slam_tracking_eval_node.cc
 )
 
-target_link_libraries(omni_slam_eval_tracking_node omni_slam_eval_lib
+target_link_libraries(omni_slam_tracking_eval_node omni_slam_eval_lib
   ${catkin_LIBRARIES}
   ${OpenCV_LIBS}
   ${HDF5_CXX_LIBRARIES}
 )
 
-install(TARGETS omni_slam_eval_tracking_node
+install(TARGETS omni_slam_tracking_eval_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
