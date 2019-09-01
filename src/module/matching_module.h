@@ -21,8 +21,11 @@ public:
     struct Stats
     {
         std::vector<std::vector<double>> frameMatchStats;
+        std::vector<std::vector<double>> rocCurves;
+        std::vector<std::vector<double>> precRecCurves;
         std::vector<std::vector<double>> radialOverlapsErrors;
-        std::vector<double> deltaRadius;
+        std::vector<std::vector<double>> goodRadialDistances;
+        std::vector<std::vector<double>> badRadialDistances;
     };
 
     MatchingModule(std::unique_ptr<feature::Detector> &detector, std::unique_ptr<feature::Matcher> &matcher, double overlap_thresh = 0.5, double dist_thresh = 10.);

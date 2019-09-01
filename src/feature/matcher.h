@@ -18,7 +18,7 @@ class Matcher
 public:
     Matcher(std::string descriptor_type, double max_dist = 0);
 
-    std::map<std::pair<int, int>, int> Match(const std::vector<data::Landmark> &train, const std::vector<data::Landmark> &query, std::vector<data::Landmark> &matches) const;
+    std::map<std::pair<int, int>, int> Match(const std::vector<data::Landmark> &train, const std::vector<data::Landmark> &query, std::vector<data::Landmark> &matches, std::vector<std::vector<double>> &distances) const;
 
 private:
     cv::Ptr<cv::DescriptorMatcher> matcher_;

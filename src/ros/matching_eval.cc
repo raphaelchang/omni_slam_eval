@@ -65,7 +65,10 @@ void MatchingEval::GetResultsData(std::map<std::string, std::vector<std::vector<
     module::MatchingModule::Stats &stats = matchingModule_->GetStats();
     data["match_stats"] = stats.frameMatchStats;
     data["radial_overlaps_errors"] = stats.radialOverlapsErrors;
-    data["delta_radius"] = {stats.deltaRadius};
+    data["good_radial_distances"] = stats.goodRadialDistances;
+    data["bad_radial_distances"] = stats.badRadialDistances;
+    data["roc_curves"] = stats.rocCurves;
+    data["precision_recall_curves"] = stats.precRecCurves;
 }
 
 bool MatchingEval::GetAttributes(std::map<std::string, std::string> &attributes)

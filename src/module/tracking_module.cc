@@ -46,7 +46,8 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
         return;
     }
 
-    tracker_->Track(landmarks_, *frames_.back());
+    vector<double> trackErrors;
+    tracker_->Track(landmarks_, *frames_.back(), trackErrors);
 
     int i = 0;
     int numGood = 0;

@@ -60,8 +60,11 @@ void MatchingModule::Update(std::unique_ptr<data::Frame> &frame)
     }
 
     vector<data::Landmark> matches;
-    map<pair<int, int>, int> numMatches = matcher_->Match(landmarks_, curLandmarks, matches);
+    vector<vector<double>> distances;
+    map<pair<int, int>, int> numMatches = matcher_->Match(landmarks_, curLandmarks, matches, distances);
     map<pair<int, int>, int> numGoodMatches;
+    map<pair<int, int>, priority_queue<double>> goodDists;
+    map<pair<int, int>, priority_queue<double>> badDists;
     #pragma omp parallel for
     for (auto it = matches.begin(); it < matches.end(); it++)
     {
@@ -79,28 +82,27 @@ void MatchingModule::Update(std::unique_ptr<data::Frame> &frame)
                 curPix << curFeat.GetKeypoint().pt.x, curFeat.GetKeypoint().pt.y;
                 double error = (curPix - prevFeatPix).norm();
                 double overlap = cv::KeyPoint::overlap(curFeat.GetKeypoint(), kpt);
+                double x = curPix(0) - frames_.back()->GetImage().cols / 2. + 0.5;
+                double y = curPix(1) - frames_.back()->GetImage().rows / 2. + 0.5;
+                double r = sqrt(x * x + y * y) / imsize;
+                double x_prev = prevFeat.GetKeypoint().pt.x - frames_.back()->GetImage().cols / 2. + 0.5;
+                double y_prev = prevFeat.GetKeypoint().pt.y - frames_.back()->GetImage().rows / 2. + 0.5;
+                double r_prev = sqrt(x_prev * x_prev + y_prev * y_prev) / imsize;
                 if (overlap > 0)
                 {
-                    double x = curPix(0) - frames_.back()->GetImage().cols / 2. + 0.5;
-                    double y = curPix(1) - frames_.back()->GetImage().rows / 2. + 0.5;
-                    double r = sqrt(x * x + y * y) / imsize;
                     #pragma omp critical
                     {
                         stats_.radialOverlapsErrors.emplace_back(vector<double>{r, overlap, error});
                     }
                 }
+                double descDist = distances[std::distance(matches.begin(), it)][i - 1];
                 if (overlap > overlapThresh_ && error < distThresh_)
                 {
-                    double x = curPix(0) - frames_.back()->GetImage().cols / 2. + 0.5;
-                    double y = curPix(1) - frames_.back()->GetImage().rows / 2. + 0.5;
-                    double r = sqrt(x * x + y * y) / imsize;
-                    double x_prev = prevFeat.GetKeypoint().pt.x - frames_.back()->GetImage().cols / 2. + 0.5;
-                    double y_prev = prevFeat.GetKeypoint().pt.y - frames_.back()->GetImage().rows / 2. + 0.5;
-                    double r_prev = sqrt(x_prev * x_prev + y_prev * y_prev) / imsize;
                     #pragma omp critical
                     {
                         numGoodMatches[{prevFeat.GetFrame().GetID(), curFeat.GetFrame().GetID()}]++;
-                        stats_.deltaRadius.push_back(fabs(r - r_prev));
+                        stats_.goodRadialDistances.emplace_back(vector<double>{fabs(r - r_prev), descDist});
+                        goodDists[{prevFeat.GetFrame().GetID(), curFeat.GetFrame().GetID()}].push(descDist);
                         if (frameIdToNum_[prevFeat.GetFrame().GetID()] == 0)
                         {
                             visualization_.AddGoodMatch(curFeat.GetKeypoint(), kpt, overlap);
@@ -111,10 +113,12 @@ void MatchingModule::Update(std::unique_ptr<data::Frame> &frame)
                 {
                     #pragma omp critical
                     {
+                        badDists[{prevFeat.GetFrame().GetID(), curFeat.GetFrame().GetID()}].push(descDist);
                         if (frameIdToNum_[prevFeat.GetFrame().GetID()] == 0)
                         {
                             visualization_.AddBadMatch(curFeat.GetKeypoint(), kpt);
                         }
+                        stats_.badRadialDistances.emplace_back(vector<double>{fabs(r - r_prev), descDist});
                     }
                 }
             }
@@ -122,6 +126,7 @@ void MatchingModule::Update(std::unique_ptr<data::Frame> &frame)
     }
     map<pair<int, int>, set<data::Landmark*>> goodCorrPrev;
     map<pair<int, int>, set<data::Landmark*>> goodCorrCur;
+    map<int, int> featuresInId;
     #pragma omp parallel for collapse(2)
     for (auto it1 = curLandmarks.begin(); it1 < curLandmarks.end(); it1++)
     {
@@ -131,6 +136,7 @@ void MatchingModule::Update(std::unique_ptr<data::Frame> &frame)
             data::Landmark &prevLandmark = *it2;
             const data::Feature &curFeat = curLandmark.GetObservations()[0];
             const data::Feature &prevFeat = prevLandmark.GetObservations()[0];
+            featuresInId[prevFeat.GetFrame().GetID()]++;
             Vector2d prevFeatPix;
             if (frames_.back()->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(frames_.back()->GetInversePose(), prevLandmark.GetGroundTruth())), prevFeatPix))
             {
@@ -155,17 +161,63 @@ void MatchingModule::Update(std::unique_ptr<data::Frame> &frame)
         }
     }
     map<pair<int, int>, int> numCorr;
+    map<pair<int, int>, int> numNeg;
+    map<pair<int, int>, vector<pair<double, double>>> rocCurves;
+    map<pair<int, int>, vector<pair<double, double>>> prCurves;
     for (auto &corrPrevPair : goodCorrPrev)
     {
         set<data::Landmark*> &corrPrev = corrPrevPair.second;
         set<data::Landmark*> &corrCur = goodCorrCur[corrPrevPair.first];
         numCorr[corrPrevPair.first] = min(corrPrev.size(), corrCur.size());
+        numNeg[corrPrevPair.first] = featuresInId[corrPrevPair.first.first] * curLandmarks.size() - numCorr[corrPrevPair.first];
+        priority_queue<double> &goodDist = goodDists[corrPrevPair.first];
+        priority_queue<double> &badDist = badDists[corrPrevPair.first];
+        while (!goodDist.empty() || !badDist.empty())
+        {
+            if (goodDist.empty())
+            {
+                rocCurves[corrPrevPair.first].push_back({0, (double)badDist.size() / numNeg[corrPrevPair.first]});
+                prCurves[corrPrevPair.first].push_back({(double)goodDist.size() / (goodDist.size() + badDist.size()), (double)goodDist.size() / numCorr[corrPrevPair.first]});
+                badDist.pop();
+                continue;
+            }
+            if (badDist.empty())
+            {
+                rocCurves[corrPrevPair.first].push_back({(double)goodDist.size() / numCorr[corrPrevPair.first], 0});
+                prCurves[corrPrevPair.first].push_back({(double)goodDist.size() / (goodDist.size() + badDist.size()), (double)goodDist.size() / numCorr[corrPrevPair.first]});
+                goodDist.pop();
+                continue;
+            }
+            rocCurves[corrPrevPair.first].push_back({(double)goodDist.size() / numCorr[corrPrevPair.first], (double)badDist.size() / numNeg[corrPrevPair.first]});
+            prCurves[corrPrevPair.first].push_back({(double)goodDist.size() / (goodDist.size() + badDist.size()), (double)goodDist.size() / numCorr[corrPrevPair.first]});
+            if (goodDist.top() < badDist.top())
+            {
+                badDist.pop();
+            }
+            else if (goodDist.top() > badDist.top())
+            {
+                goodDist.pop();
+            }
+            else
+            {
+                goodDist.pop();
+                badDist.pop();
+            }
+        }
     }
 
     for (auto &statPair : numGoodMatches)
     {
         int frameDiff = frameIdToNum_[statPair.first.second] - frameIdToNum_[statPair.first.first];
         stats_.frameMatchStats.emplace_back(vector<double>{(double)frameDiff, (double)statPair.second, (double)statPair.second / numMatches[statPair.first], (double)statPair.second / numCorr[statPair.first]});
+        for (pair<double, double> &roc : rocCurves[statPair.first])
+        {
+            stats_.rocCurves.emplace_back(vector<double>{(double)frameIdToNum_[statPair.first.first], (double)frameIdToNum_[statPair.first.second], roc.first, roc.second});
+        }
+        for (pair<double, double> &pr : prCurves[statPair.first])
+        {
+            stats_.precRecCurves.emplace_back(vector<double>{(double)frameIdToNum_[statPair.first.first], (double)frameIdToNum_[statPair.first.second], pr.first, pr.second});
+        }
     }
 
     //landmarks_.reserve(landmarks_.size() + curLandmarks.size());

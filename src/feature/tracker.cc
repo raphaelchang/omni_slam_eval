@@ -22,7 +22,7 @@ void Tracker::Init(data::Frame &init_frame)
     prevFrame_ = &init_frame;
 }
 
-int Tracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_frame)
+int Tracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_frame, std::vector<double> &errors)
 {
     if (prevFrame_ == nullptr)
     {
@@ -54,6 +54,7 @@ int Tracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_fram
     std::vector<unsigned char> status;
     std::vector<float> err;
     cv::calcOpticalFlowPyrLK(prevFrame_->GetImage(), cur_frame.GetImage(), points_to_track, results, status, err, windowSize_, numScales_, termCrit_, 0);
+    errors.clear();
     int numGood = 0;
     for (int i = 0; i < results.size(); i++)
     {
@@ -85,6 +86,7 @@ int Tracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_fram
             cv::KeyPoint kpt(results[i], orig_kpt[i].size);
             data::Feature feat(cur_frame, kpt);
             landmark.AddObservation(feat);
+            errors.push_back(err[i]);
             numGood++;
         }
     }
