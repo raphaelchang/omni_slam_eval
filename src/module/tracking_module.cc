@@ -2,6 +2,7 @@
 
 #include "util/tf_util.h"
 #include "util/math_util.h"
+#include <omp.h>
 
 using namespace std;
 
@@ -29,6 +30,7 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
     int imsize = max(frames_.back()->GetImage().rows, frames_.back()->GetImage().cols);
     if (frameNum_ == 0)
     {
+        #pragma omp parallel for collapse(2)
         for (int i = 0; i < rs_.size() - 1; i++)
         {
             for (int j = 0; j < ts_.size() - 1; j++)
@@ -52,8 +54,8 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
     stats_.trackLengths.resize(landmarks_.size(), 0);
     for (data::Landmark& landmark : landmarks_)
     {
-        data::Feature *obs;
-        if ((obs = landmark.GetObservationByFrameID(frames_.back()->GetID())) != nullptr)
+        const data::Feature *obs = landmark.GetObservationByFrameID(frames_.back()->GetID());
+        if (obs != nullptr)
         {
             double x = obs->GetKeypoint().pt.x - frames_.back()->GetImage().cols / 2. + 0.5;
             double y = obs->GetKeypoint().pt.y - frames_.back()->GetImage().rows / 2. + 0.5;
@@ -63,24 +65,20 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
             vector<double>::const_iterator ti = upper_bound(ts_.begin(), ts_.end(), t);
             int rinx = min((int)(ri - rs_.begin()), (int)(rs_.size() - 1)) - 1;
             int tinx = min((int)(ti - ts_.begin()), (int)(ts_.size() - 1)) - 1;
-            if (regionCount.find({rinx, tinx}) == regionCount.end())
-            {
-                regionCount[{rinx, tinx}] = 0;
-            }
             regionCount[{rinx, tinx}]++;
 
-            Vector2d pixel_gnd;
-            if (frames_.back()->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(frames_.back()->GetInversePose(), landmark.GetGroundTruth())), pixel_gnd))
+            Vector2d pixelGnd;
+            if (frames_.back()->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(frames_.back()->GetInversePose(), landmark.GetGroundTruth())), pixelGnd))
             {
                 Vector2d pixel;
                 pixel << obs->GetKeypoint().pt.x, obs->GetKeypoint().pt.y;
-                double error = (pixel - pixel_gnd).norm();
+                double error = (pixel - pixelGnd).norm();
 
-                data::Feature *obsPrev = landmark.GetObservationByFrameID((*next(frames_.rbegin()))->GetID());
-                visualization_.AddTrack(cv::Point2f(pixel_gnd(0), pixel_gnd(1)), obsPrev->GetKeypoint().pt, obs->GetKeypoint().pt, error, i);
+                const data::Feature *obsPrev = landmark.GetObservationByFrameID((*next(frames_.rbegin()))->GetID());
+                visualization_.AddTrack(cv::Point2f(pixelGnd(0), pixelGnd(1)), obsPrev->GetKeypoint().pt, obs->GetKeypoint().pt, error, i);
 
-                double xg = pixel_gnd(0) - frames_.back()->GetImage().cols / 2. + 0.5;
-                double yg = pixel_gnd(1) - frames_.back()->GetImage().rows / 2. + 0.5;
+                double xg = pixelGnd(0) - frames_.back()->GetImage().cols / 2. + 0.5;
+                double yg = pixelGnd(1) - frames_.back()->GetImage().rows / 2. + 0.5;
                 double rg = sqrt(xg * xg + yg * yg) / imsize;
                 stats_.radialErrors.emplace_back(vector<double>{rg, error});
                 stats_.frameErrors.emplace_back(vector<double>{(double)landmark.GetNumObservations() - 1, (double)i, rg, error});
@@ -88,25 +86,31 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
             stats_.trackLengths[i]++;
             numGood++;
         }
-        else if ((obs = landmark.GetObservationByFrameID((*next(frames_.rbegin()))->GetID())) != nullptr) // Failed in current frame
+        else
         {
-            Vector2d pixel_gnd;
-            if (frames_.back()->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(frames_.back()->GetInversePose(), landmark.GetGroundTruth())), pixel_gnd))
+            const data::Feature *obs = landmark.GetObservationByFrameID((*next(frames_.rbegin()))->GetID());
+            if (obs != nullptr) // Failed in current frame
             {
-                double x = pixel_gnd(0) - frames_.back()->GetImage().cols / 2. + 0.5;
-                double y = pixel_gnd(1) - frames_.back()->GetImage().rows / 2. + 0.5;
-                double r = sqrt(x * x + y * y) / imsize;
-                stats_.failureRadDists.push_back(r);
+
+                Vector2d pixelGnd;
+                if (frames_.back()->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(frames_.back()->GetInversePose(), landmark.GetGroundTruth())), pixelGnd))
+                {
+                    double x = pixelGnd(0) - frames_.back()->GetImage().cols / 2. + 0.5;
+                    double y = pixelGnd(1) - frames_.back()->GetImage().rows / 2. + 0.5;
+                    double r = sqrt(x * x + y * y) / imsize;
+                    stats_.failureRadDists.push_back(r);
+                }
+                stats_.trackLengths.push_back(landmark.GetNumObservations() - 1);
             }
-            stats_.trackLengths.push_back(landmark.GetNumObservations() - 1);
         }
         i++;
     }
+    #pragma omp parallel for collapse(2)
     for (int i = 0; i < rs_.size() - 1; i++)
     {
         for (int j = 0; j < ts_.size() - 1; j++)
         {
-            if (regionCount.find({i, j}) == regionCount.end() || regionCount[{i, j}] < minFeaturesRegion_)
+            if (regionCount[{i, j}] < minFeaturesRegion_)
             {
                 detector_->DetectInRadialRegion(*frames_.back(), landmarks_, rs_[i] * imsize, rs_[i+1] * imsize, ts_[j], ts_[j+1]);
             }
@@ -135,7 +139,7 @@ void TrackingModule::Visualization::Init(cv::Size img_size, int num_colors)
     visMask_ = cv::Mat::zeros(img_size, CV_8UC3);
     curMask_ = cv::Mat::zeros(img_size, CV_8UC3);
     cv::RNG rng(123);
-    for (int i = 0; i < num_colors; i++)
+    for (int i = 0; i < max(num_colors, 100); i++)
     {
         colors_.emplace_back(rng.uniform(10, 200), rng.uniform(10, 200), rng.uniform(10, 200));
     }
@@ -143,7 +147,8 @@ void TrackingModule::Visualization::Init(cv::Size img_size, int num_colors)
 
 void TrackingModule::Visualization::AddTrack(cv::Point2f gnd, cv::Point2f prev, cv::Point2f cur, double error, int index)
 {
-    cv::Scalar color(0, (int)(255 * (1 - error / 10)), (int)(255 * (error / 10)));
+    int maxerror = min(visMask_.rows, visMask_.cols) / 100;
+    cv::Scalar color(0, (int)(255 * (1 - error / maxerror)), (int)(255 * (error / maxerror)));
     cv::line(visMask_, prev, cur, color, 1);
     cv::circle(curMask_, cur, 1, color, -1);
     cv::circle(curMask_, gnd, 3, colors_[index % colors_.size()], -1);

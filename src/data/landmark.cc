@@ -9,9 +9,9 @@ Landmark::Landmark()
 {
 }
 
-void Landmark::AddObservation(Feature obs)
+void Landmark::AddObservation(Feature obs, bool compute_gnd)
 {
-    if (obs_.empty())
+    if (compute_gnd && obs_.empty())
     {
         if (obs.HasWorldPoint())
         {
@@ -27,12 +27,17 @@ void Landmark::AddObservation(Feature obs)
     obs_.push_back(obs);
 }
 
+const std::vector<Feature>& Landmark::GetObservations() const
+{
+    return obs_;
+}
+
 std::vector<Feature>& Landmark::GetObservations()
 {
     return obs_;
 }
 
-bool Landmark::IsObservedInFrame(const int frame_id)
+bool Landmark::IsObservedInFrame(const int frame_id) const
 {
     for (Feature f : obs_)
     {
@@ -44,7 +49,7 @@ bool Landmark::IsObservedInFrame(const int frame_id)
     return false;
 }
 
-const int Landmark::GetFirstFrameID()
+const int Landmark::GetFirstFrameID() const
 {
     if (obs_.size() > 0)
     {
@@ -53,26 +58,26 @@ const int Landmark::GetFirstFrameID()
     return -1;
 }
 
-const int Landmark::GetNumObservations()
+const int Landmark::GetNumObservations() const
 {
     return obs_.size();
 }
 
-Feature* Landmark::GetObservationByFrameID(const int frame_id)
+const Feature* Landmark::GetObservationByFrameID(const int frame_id) const
 {
     if (idToIndex_.find(frame_id) == idToIndex_.end())
     {
         return nullptr;
     }
-    return &obs_[idToIndex_[frame_id]];
+    return &obs_[idToIndex_.at(frame_id)];
 }
 
-Vector3d Landmark::GetGroundTruth()
+Vector3d Landmark::GetGroundTruth() const
 {
     return groundTruth_;
 }
 
-bool Landmark::HasGroundTruth()
+bool Landmark::HasGroundTruth() const
 {
     return hasGroundTruth_;
 }

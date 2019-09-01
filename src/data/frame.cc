@@ -51,17 +51,33 @@ Frame::Frame(const int id, cv::Mat &image, double time, camera::CameraModel &cam
     hasDepth_ = false;
 }
 
-const Matrix<double, 3, 4>& Frame::GetPose()
+Frame::Frame(const Frame &other)
+    : image_(other.image_.clone()),
+    depthImage_(other.depthImage_.clone()),
+    imageComp_(other.imageComp_),
+    depthImageComp_(other.depthImageComp_),
+    cameraModel_(other.cameraModel_),
+    id_(other.id_),
+    pose_(other.pose_),
+    invPose_(other.invPose_),
+    timeSec_(other.timeSec_),
+    hasPose_(other.hasPose_),
+    hasDepth_(other.hasDepth_),
+    isCompressed_(other.isCompressed_)
+{
+}
+
+const Matrix<double, 3, 4>& Frame::GetPose() const
 {
     return pose_;
 }
 
-const Matrix<double, 3, 4>& Frame::GetInversePose()
+const Matrix<double, 3, 4>& Frame::GetInversePose() const
 {
     return invPose_;
 }
 
-cv::Mat& Frame::GetImage()
+const cv::Mat& Frame::GetImage()
 {
     if (isCompressed_)
     {
@@ -70,7 +86,7 @@ cv::Mat& Frame::GetImage()
     return image_;
 }
 
-cv::Mat& Frame::GetDepthImage()
+const cv::Mat& Frame::GetDepthImage()
 {
     if (isCompressed_)
     {
@@ -79,12 +95,12 @@ cv::Mat& Frame::GetDepthImage()
     return depthImage_;
 }
 
-const int Frame::GetID()
+const int Frame::GetID() const
 {
     return id_;
 }
 
-const camera::CameraModel& Frame::GetCameraModel()
+const camera::CameraModel& Frame::GetCameraModel() const
 {
     return cameraModel_;
 }
@@ -110,12 +126,12 @@ void Frame::SetDepthImage(cv::Mat &depth_image)
     hasDepth_ = true;
 }
 
-bool Frame::HasPose()
+bool Frame::HasPose() const
 {
     return hasPose_;
 }
 
-bool Frame::HasDepthImage()
+bool Frame::HasDepthImage() const
 {
     return hasDepth_;
 }
@@ -153,7 +169,7 @@ void Frame::DecompressImages()
     isCompressed_ = false;
 }
 
-bool Frame::IsCompressed()
+bool Frame::IsCompressed() const
 {
     return isCompressed_;
 }

@@ -142,9 +142,8 @@ class Matcher:
         if self.frame_inx == 0:
             rays = np.asarray([[self.camera_model.unproj((np.array(p.pt) / np.array([frame_gray.shape[::-1]]))[0]), self.camera_model.unproj((np.array((p.pt[0], p.pt[1] - p.size / 2.)) / np.array([frame_gray.shape[::-1]]))[0]), self.camera_model.unproj((np.array((p.pt[0] + p.size / 2., p.pt[1])) / np.array([frame_gray.shape[::-1]]))[0]), self.camera_model.unproj((np.array((p.pt[0], p.pt[1] + p.size / 2.)) / np.array([frame_gray.shape[::-1]]))[0]), self.camera_model.unproj((np.array((p.pt[0] - p.size / 2., p.pt[1])) / np.array([frame_gray.shape[::-1]]))[0])] for p in kp])
             depths = np.asarray([[cv_depth_image[int(p.pt[1]), int(p.pt[0])] / 65535. * 500] for p in kp])
-            rays = rays * 10000 #depths[:, np.newaxis]
+            rays = rays * depths[:, np.newaxis]
             self.kp0 = kp
-            print len(self.kp0)
             self.des0 = des
             self.rays = rays
             self.old_tf = geometry_msgs.msg.TransformStamped()

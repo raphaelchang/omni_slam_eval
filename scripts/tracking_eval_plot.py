@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import argparse
 
-parser = argparse.ArgumentParser(description='Plot tracker evaluation results')
-parser.add_argument('results_file', nargs=1, help='tracker results file')
+parser = argparse.ArgumentParser(description='Plot tracking evaluation results')
+parser.add_argument('results_file', nargs=1, help='tracking results file')
 args = parser.parse_args()
 
 with h5py.File(args.results_file[0], 'r') as f:

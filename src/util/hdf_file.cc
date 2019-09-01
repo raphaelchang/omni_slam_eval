@@ -159,5 +159,37 @@ bool HDFFile::AddAttributes(std::map<std::string, double> attributes)
     return true;
 }
 
+bool HDFFile::AddAttributes(std::map<std::string, std::string> attributes)
+{
+    try
+    {
+        DataSet dataset = file_.openDataSet("attributes");
+        for (auto &attribute : attributes)
+        {
+            DataSpace dataspace(H5S_SCALAR);
+            StrType strdatatype(PredType::C_S1, attribute.second.length());
+            Attribute attr = dataset.createAttribute(H5std_string(attribute.first.c_str()), strdatatype, dataspace);
+            const H5std_string strbuf(attribute.second.c_str());
+            attr.write(strdatatype, strbuf);
+        }
+    }
+    catch(FileIException error)
+    {
+        error.printErrorStack();
+        return false;
+    }
+    catch(DataSetIException error)
+    {
+        error.printErrorStack();
+        return false;
+    }
+    catch(DataSpaceIException error)
+    {
+        error.printErrorStack();
+        return false;
+    }
+    return true;
+}
+
 }
 }

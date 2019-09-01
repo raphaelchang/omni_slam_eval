@@ -18,60 +18,64 @@ class Detector
 public:
     template<typename... Args>
     Detector(std::string type, Args... args)
-        : type_(type)
+        : detectorType_(type),
+        descriptorType_(type)
     {
-        if (type == "GFTT")
-        {
-            detector_ = cv::GFTTDetector::create(args...);
-        }
-        else if (type == "FAST")
-        {
-            detector_ = cv::FastFeatureDetector::create(args...);
-        }
-        else if (type == "SIFT")
+        if (type == "SIFT")
         {
             detector_ = cv::xfeatures2d::SIFT::create(args...);
+            descriptor_ = cv::xfeatures2d::SIFT::create(args...);
         }
         else if (type == "SURF")
         {
             detector_ = cv::xfeatures2d::SURF::create(args...);
+            descriptor_ = cv::xfeatures2d::SURF::create(args...);
         }
         else if (type == "ORB")
         {
             detector_ = cv::ORB::create(args...);
+            descriptor_ = cv::ORB::create(args...);
         }
         else if (type == "BRISK")
         {
             detector_ = cv::BRISK::create(args...);
-        }
-        else if (type == "STAR")
-        {
-            detector_ = cv::xfeatures2d::StarDetector::create(args...);
+            descriptor_ = cv::BRISK::create(args...);
         }
         else if (type == "AKAZE")
         {
             detector_ = cv::AKAZE::create(args...);
+            descriptor_ = cv::AKAZE::create(args...);
         }
         else if (type == "KAZE")
         {
             detector_ = cv::KAZE::create(args...);
-        }
-        else if (type == "AGAST")
-        {
-            detector_ = cv::AgastFeatureDetector::create(args...);
+            descriptor_ = cv::KAZE::create(args...);
         }
     }
-    Detector(std::string type, std::map<std::string, double> args);
-    int Detect(data::Frame &frame, std::vector<data::Landmark> &landmarks);
-    int DetectInRectangularRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, cv::Point2f start, cv::Point2f end);
-    int DetectInRadialRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, double start_r, double end_r, double start_t, double end_t);
-    int DetectInRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, cv::Mat &mask);
+    Detector(std::string detector_type, std::map<std::string, double> args);
+    Detector(std::string detector_type, std::string descriptor_type, std::map<std::string, double> det_args, std::map<std::string, double> desc_args);
+    Detector(const Detector &other);
+
+    int Detect(data::Frame &frame, std::vector<data::Landmark> &landmarks) const;
+    int DetectInRectangularRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, cv::Point2f start, cv::Point2f end) const;
+    int DetectInRadialRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, double start_r, double end_r, double start_t, double end_t) const;
+    int DetectInRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, cv::Mat &mask) const;
+
+    std::string GetDetectorType();
+    std::string GetDescriptorType();
 
     static bool IsDetectorTypeValid(std::string name);
+    static bool IsDescriptorTypeValid(std::string name);
+    static bool IsDetectorDescriptorCombinationValid(std::string det, std::string desc);
 
 private:
     cv::Ptr<cv::Feature2D> detector_;
-    std::string type_;
+    cv::Ptr<cv::Feature2D> descriptor_;
+    std::string detectorType_;
+    std::string descriptorType_;
+
+    std::map<std::string, double> detectorArgs_;
+    std::map<std::string, double> descriptorArgs_;
 };
 
 }

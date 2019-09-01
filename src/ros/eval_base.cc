@@ -82,6 +82,16 @@ void EvalBase::FrameCallback(const sensor_msgs::ImageConstPtr &image, const sens
     frameNum_++;
 }
 
+bool EvalBase::GetAttributes(std::map<std::string, std::string> &attributes)
+{
+    return false;
+}
+
+bool EvalBase::GetAttributes(std::map<std::string, double> &attributes)
+{
+    return false;
+}
+
 void EvalBase::Visualize(cv_bridge::CvImagePtr &base_img)
 {
 }
@@ -164,7 +174,18 @@ void EvalBase::Run()
             out.AddDataset(dataset.first, dataset.second);
         }
         out.AddAttribute("bag_file", bagFile);
+        out.AddAttribute("rate", rate);
         out.AddAttributes(cameraParams_);
+        std::map<std::string, double> numAttr;
+        if (GetAttributes(numAttr))
+        {
+            out.AddAttributes(numAttr);
+        }
+        std::map<std::string, std::string> strAttr;
+        if (GetAttributes(strAttr))
+        {
+            out.AddAttributes(strAttr);
+        }
     }
 }
 

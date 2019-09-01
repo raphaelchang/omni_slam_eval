@@ -1,25 +1,25 @@
 <launch>
     <arg name="bag_file" default="" />
-    <arg name="results_file" default="$(arg bag_file).tracking.hdf5" />
+    <arg name="results_file" default="$(arg bag_file).matching.hdf5" />
     <arg name="rate" default="1" />
-    <node pkg="omni_slam_eval" type="omni_slam_tracking_eval_node" name="omni_slam_tracking_eval_node" output="screen">
+    <node pkg="omni_slam_eval" type="omni_slam_matching_eval_node" name="omni_slam_matching_eval_node" output="screen">
         <param name="bag_file" value="$(arg bag_file)" />
         <param name="results_file" value="$(arg results_file)" />
         <param name="image_topic" value="/unity_ros/Sphere/FisheyeCamera/image_raw" />
         <param name="depth_image_topic" value="/unity_ros/Sphere/FisheyeDepthCamera/image_raw" />
         <param name="pose_topic" value="/unity_ros/Sphere/TrueState/pose" />
-        <param name="tracked_image_topic" value="/omni_slam_eval/tracked" />
+        <param name="matched_image_topic" value="/omni_slam_eval/matched" />
         <param name="rate" value="$(arg rate)" />
         <rosparam>
             camera_model: 'double_sphere'
             camera_parameters: {fx: 295.936, fy: 295.936, cx: 512, cy: 512, chi: 0.3, alpha: 0.6666667}
-            detector_type: 'GFTT'
-            detector_parameters: {maxCorners: 100, qualityLevel: 0.01, minDistance: 5, blockSize: 5}
-            tracker_window_size: 128
-            tracker_num_scales: 4
-            tracker_delta_pixel_error_threshold: 3.0
-            tracker_error_threshold: 20.0
-            min_features_per_region: 10
+            detector_type: 'SURF'
+            detector_parameters: {hessianThreshold: 500}
+            descriptor_type: 'SURF'
+            descriptor_parameters: {}
+            matcher_max_dist: 0
+            feature_overlap_threshold: 0.5
+            feature_distance_threshold: 10
         </rosparam>
     </node>
 </launch>

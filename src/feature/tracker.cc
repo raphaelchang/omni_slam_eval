@@ -24,7 +24,7 @@ void Tracker::Init(data::Frame &init_frame)
 
 int Tracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_frame)
 {
-    if (prevFrame_ ==  nullptr)
+    if (prevFrame_ == nullptr)
     {
         return 0;
     }
@@ -37,8 +37,8 @@ int Tracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_fram
     for (int i = 0; i < landmarks.size(); i++)
     {
         data::Landmark &landmark = landmarks[i];
-        data::Feature *feat;
-        if ((feat = landmark.GetObservationByFrameID(prev_id)) != nullptr)
+        const data::Feature *feat = landmark.GetObservationByFrameID(prev_id);
+        if (feat != nullptr)
         {
             points_to_track.push_back(feat->GetKeypoint().pt);
             orig_kpt.push_back(feat->GetKeypoint());
@@ -47,6 +47,7 @@ int Tracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_fram
     }
     if (points_to_track.size() == 0)
     {
+        prevFrame_ = &cur_frame;
         return 0;
     }
     std::vector<cv::Point2f> results;

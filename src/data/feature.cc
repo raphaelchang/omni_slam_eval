@@ -10,7 +10,7 @@ namespace data
 Feature::Feature(Frame &frame, cv::KeyPoint kpt, cv::Mat descriptor)
     : frame_(frame),
     kpt_(kpt),
-    descriptor_(descriptor.clone())
+    descriptor_(descriptor)
 {
 }
 
@@ -20,23 +20,27 @@ Feature::Feature(Frame &frame, cv::KeyPoint kpt)
 {
 }
 
-Frame& Feature::GetFrame()
+const Frame& Feature::GetFrame() const
 {
     return frame_;
 }
 
-cv::KeyPoint& Feature::GetKeypoint()
+const cv::KeyPoint& Feature::GetKeypoint() const
 {
     return kpt_;
 }
 
-cv::Mat& Feature::GetDescriptor()
+const cv::Mat& Feature::GetDescriptor() const
 {
     return descriptor_;
 }
 
 Vector3d Feature::GetWorldPoint()
 {
+    if (worldPointCached_)
+    {
+        return worldPoint_;
+    }
     Vector3d cameraFramePt;
     Vector2d pixelPt;
     pixelPt << kpt_.pt.x + 0.5, kpt_.pt.y + 0.5;
@@ -48,10 +52,12 @@ Vector3d Feature::GetWorldPoint()
         frame_.CompressImages();
     }
     Vector3d worldFramePt = util::TFUtil::CameraFrameToWorldFrame(cameraFramePt);
-    return util::TFUtil::TransformPoint(frame_.GetPose(), worldFramePt);
+    worldPoint_ = util::TFUtil::TransformPoint(frame_.GetPose(), worldFramePt);
+    worldPointCached_ = true;
+    return worldPoint_;
 }
 
-bool Feature::HasWorldPoint()
+bool Feature::HasWorldPoint() const
 {
     return frame_.HasPose() && frame_.HasDepthImage();
 }

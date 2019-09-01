@@ -20,6 +20,7 @@ public:
     bool AddAttribute(std::string name, double value);
     bool AddAttribute(std::string name, std::string value);
     bool AddAttributes(std::map<std::string, double> attributes);
+    bool AddAttributes(std::map<std::string, std::string> attributes);
 
 private:
     H5File file_;

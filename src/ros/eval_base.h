@@ -47,6 +47,8 @@ private:
 
     virtual void ProcessFrame(std::unique_ptr<data::Frame> &&frame) = 0;
     virtual void GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data) = 0;
+    virtual bool GetAttributes(std::map<std::string, std::string> &attributes);
+    virtual bool GetAttributes(std::map<std::string, double> &attributes);
     virtual void Visualize(cv_bridge::CvImagePtr &base_img);
 
     image_transport::SubscriberFilter imageSubscriber_;

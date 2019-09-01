@@ -19,23 +19,24 @@ public:
     Frame(const int id, cv::Mat &image, cv::Mat &depth_image, double time, camera::CameraModel &camera_model);
     Frame(const int id, cv::Mat &image, Matrix<double, 3, 4>  &pose, double time, camera::CameraModel &camera_model);
     Frame(const int id, cv::Mat &image, double time, camera::CameraModel &camera_model);
+    Frame(const Frame &other);
 
-    const Matrix<double, 3, 4>& GetPose();
-    const Matrix<double, 3, 4>& GetInversePose();
-    cv::Mat& GetImage();
-    cv::Mat& GetDepthImage();
-    const camera::CameraModel& GetCameraModel();
-    const int GetID();
+    const Matrix<double, 3, 4>& GetPose() const;
+    const Matrix<double, 3, 4>& GetInversePose() const;
+    const cv::Mat& GetImage();
+    const cv::Mat& GetDepthImage();
+    const camera::CameraModel& GetCameraModel() const;
+    const int GetID() const;
 
-    bool HasPose();
-    bool HasDepthImage();
+    bool HasPose() const;
+    bool HasDepthImage() const;
 
     void SetPose(Matrix<double, 3, 4> &pose);
     void SetDepthImage(cv::Mat &depth_image);
 
     void CompressImages();
     void DecompressImages();
-    bool IsCompressed();
+    bool IsCompressed() const;
 
 private:
     const int id_;

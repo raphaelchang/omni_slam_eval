@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.4)
 
 project(omni_slam_eval)
 
@@ -32,6 +32,8 @@ find_package(HDF5 COMPONENTS C CXX HL REQUIRED)
 include_directories(${HDF5_INCLUDE_DIR})
 link_directories(${HDF5_LIBRARY_DIRS})
 
+find_package(OpenMP REQUIRED)
+
 catkin_package(
  INCLUDE_DIRS src
  LIBRARIES ${PROJECT_NAME}
@@ -46,6 +48,7 @@ include_directories(
 
 add_library(omni_slam_eval_lib
   src/module/tracking_module.cc
+  src/module/matching_module.cc
   src/data/frame.cc
   src/data/feature.cc
   src/data/landmark.cc
@@ -53,6 +56,7 @@ add_library(omni_slam_eval_lib
   src/camera/double_sphere.cc
   src/feature/tracker.cc
   src/feature/detector.cc
+  src/feature/matcher.cc
   src/util/tf_util.cc
   src/util/math_util.cc
   src/util/hdf_file.cc
@@ -64,13 +68,37 @@ add_executable(omni_slam_tracking_eval_node
     src/omni_slam_tracking_eval_node.cc
 )
 
-target_link_libraries(omni_slam_tracking_eval_node omni_slam_eval_lib
+add_executable(omni_slam_matching_eval_node
+    src/ros/matching_eval.cc
+    src/ros/eval_base.cc
+    src/omni_slam_matching_eval_node.cc
+)
+
+target_link_libraries(omni_slam_tracking_eval_node PUBLIC omni_slam_eval_lib
   ${catkin_LIBRARIES}
   ${OpenCV_LIBS}
   ${HDF5_CXX_LIBRARIES}
+  ${OpenMP_CXX_FLAGS}
 )
 
+target_link_libraries(omni_slam_matching_eval_node PUBLIC omni_slam_eval_lib
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBS}
+  ${HDF5_CXX_LIBRARIES}
+  ${OpenMP_CXX_FLAGS}
+)
+
+target_compile_options(omni_slam_tracking_eval_node PUBLIC ${OpenMP_CXX_FLAGS})
+target_compile_options(omni_slam_matching_eval_node PUBLIC ${OpenMP_CXX_FLAGS})
+set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS})
+
 install(TARGETS omni_slam_tracking_eval_node
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+install(TARGETS omni_slam_matching_eval_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

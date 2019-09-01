@@ -18,17 +18,19 @@ public:
     Feature(Frame &frame, cv::KeyPoint kpt, cv::Mat descriptor);
     Feature(Frame &frame, cv::KeyPoint kpt);
 
-    Frame& GetFrame();
-    cv::KeyPoint& GetKeypoint();
-    cv::Mat& GetDescriptor();
+    const Frame& GetFrame() const;
+    const cv::KeyPoint& GetKeypoint() const;
+    const cv::Mat& GetDescriptor() const;
 
     Vector3d GetWorldPoint();
-    bool HasWorldPoint();
+    bool HasWorldPoint() const;
 
+    bool worldPointCached_{false};
 private:
     Frame &frame_;
     cv::KeyPoint kpt_;
     cv::Mat descriptor_;
+    Vector3d worldPoint_;
 };
 
 }

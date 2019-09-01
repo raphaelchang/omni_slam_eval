@@ -3,6 +3,7 @@
 
 #include <opencv2/opencv.hpp>
 #include <vector>
+#include <memory>
 
 #include "feature/tracker.h"
 #include "feature/detector.h"
@@ -50,8 +51,8 @@ private:
         const double trackFade_{0.99};
     };
 
-    std::unique_ptr<feature::Detector> detector_;
-    std::unique_ptr<feature::Tracker> tracker_;
+    std::shared_ptr<feature::Detector> detector_;
+    std::shared_ptr<feature::Tracker> tracker_;
 
     std::vector<std::unique_ptr<data::Frame>> frames_;
     std::vector<data::Landmark> landmarks_;

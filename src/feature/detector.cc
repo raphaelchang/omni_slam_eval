@@ -6,194 +6,439 @@ namespace omni_slam
 namespace feature
 {
 
-Detector::Detector(std::string type, std::map<std::string, double> args)
+Detector::Detector(std::string detector_type, std::string descriptor_type, std::map<std::string, double> det_args, std::map<std::string, double> desc_args)
+    : detectorType_(detector_type),
+    descriptorType_(descriptor_type),
+    detectorArgs_(det_args),
+    descriptorArgs_(desc_args)
 {
-    if (type == "GFTT")
+    if (detector_type == "GFTT")
     {
-        if (args.find("qualityLevel") == args.end())
+        if (det_args.find("qualityLevel") == det_args.end())
         {
-            detector_ = cv::GFTTDetector::create((int)args["maxCorners"]);
+            detector_ = cv::GFTTDetector::create((int)det_args["maxCorners"]);
         }
-        else if (args.find("minDistance") == args.end())
+        else if (det_args.find("minDistance") == det_args.end())
         {
-            detector_ = cv::GFTTDetector::create((int)args["maxCorners"], args["qualityLevel"]);
+            detector_ = cv::GFTTDetector::create((int)det_args["maxCorners"], det_args["qualityLevel"]);
         }
-        else if (args.find("blockSize") == args.end())
+        else if (det_args.find("blockSize") == det_args.end())
         {
-            detector_ = cv::GFTTDetector::create((int)args["maxCorners"], args["qualityLevel"], (int)args["minDistance"]);
+            detector_ = cv::GFTTDetector::create((int)det_args["maxCorners"], det_args["qualityLevel"], (int)det_args["minDistance"]);
         }
         else
         {
-            detector_ = cv::GFTTDetector::create((int)args["maxCorners"], args["qualityLevel"], (int)args["minDistance"], (int)args["blockSize"]);
+            detector_ = cv::GFTTDetector::create((int)det_args["maxCorners"], det_args["qualityLevel"], (int)det_args["minDistance"], (int)det_args["blockSize"]);
         }
     }
-    else if (type == "FAST")
+    else if (detector_type == "FAST")
     {
-        if (args.find("threshold") == args.end())
+        if (det_args.find("threshold") == det_args.end())
         {
             detector_ = cv::FastFeatureDetector::create();
         }
         else
         {
-            detector_ = cv::FastFeatureDetector::create((int)args["threshold"]);
+            detector_ = cv::FastFeatureDetector::create((int)det_args["threshold"]);
         }
     }
-    else if (type == "SIFT")
+    else if (detector_type == "SIFT")
     {
-        if (args.find("nOctaveLayers") == args.end())
+        if (det_args.find("nOctaveLayers") == det_args.end())
         {
-            detector_ = cv::xfeatures2d::SIFT::create((int)args["nfeatures"]);
+            detector_ = cv::xfeatures2d::SIFT::create((int)det_args["nfeatures"]);
         }
-        else if (args.find("contrastThreshold") == args.end())
+        else if (det_args.find("contrastThreshold") == det_args.end())
         {
-            detector_ = cv::xfeatures2d::SIFT::create((int)args["nfeatures"], (int)args["nOctaveLayers"]);
+            detector_ = cv::xfeatures2d::SIFT::create((int)det_args["nfeatures"], (int)det_args["nOctaveLayers"]);
         }
-        else if (args.find("edgeThreshold") == args.end())
+        else if (det_args.find("edgeThreshold") == det_args.end())
         {
-            detector_ = cv::xfeatures2d::SIFT::create((int)args["nfeatures"], (int)args["nOctaveLayers"], args["contrastThreshold"]);
+            detector_ = cv::xfeatures2d::SIFT::create((int)det_args["nfeatures"], (int)det_args["nOctaveLayers"], det_args["contrastThreshold"]);
+        }
+        else if (det_args.find("sigma") == det_args.end())
+        {
+            detector_ = cv::xfeatures2d::SIFT::create((int)det_args["nfeatures"], (int)det_args["nOctaveLayers"], det_args["contrastThreshold"], det_args["edgeThreshold"]);
         }
         else
         {
-            detector_ = cv::xfeatures2d::SIFT::create((int)args["nfeatures"], (int)args["nOctaveLayers"], args["contrastThreshold"], args["edgeThreshold"]);
+            detector_ = cv::xfeatures2d::SIFT::create((int)det_args["nfeatures"], (int)det_args["nOctaveLayers"], det_args["contrastThreshold"], det_args["edgeThreshold"], det_args["sigma"]);
         }
     }
-    else if (type == "SURF")
+    else if (detector_type == "SURF")
     {
-        if (args.find("hessianThreshold") == args.end())
+        if (det_args.find("hessianThreshold") == det_args.end())
         {
             detector_ = cv::xfeatures2d::SURF::create();
         }
-        else if (args.find("nOctaves") == args.end())
+        else if (det_args.find("nOctaves") == det_args.end())
         {
-            detector_ = cv::xfeatures2d::SURF::create(args["hessianThreshold"]);
+            detector_ = cv::xfeatures2d::SURF::create(det_args["hessianThreshold"]);
         }
-        else if (args.find("nOctaveLayers") == args.end())
+        else if (det_args.find("nOctaveLayers") == det_args.end())
         {
-            detector_ = cv::xfeatures2d::SURF::create(args["hessianThreshold"], (int)args["nOctaves"]);
-        }
-        else
-        {
-            detector_ = cv::xfeatures2d::SURF::create(args["hessianThreshold"], (int)args["nOctave"], (int)args["nOctaveLayers"]);
-        }
-    }
-    else if (type == "ORB")
-    {
-        if (args.find("scaleFactor") == args.end())
-        {
-            detector_ = cv::ORB::create((int)args["nfeatures"]);
-        }
-        else if (args.find("nlevels") == args.end())
-        {
-            detector_ = cv::ORB::create((int)args["nfeatures"], (int)args["scaleFactor"]);
-        }
-        else if (args.find("edgeThreshold") == args.end())
-        {
-            detector_ = cv::ORB::create((int)args["nfeatures"], (int)args["scaleFactor"], (int)args["nlevels"]);
+            detector_ = cv::xfeatures2d::SURF::create(det_args["hessianThreshold"], (int)det_args["nOctaves"]);
         }
         else
         {
-            detector_ = cv::ORB::create((int)args["nfeatures"], (int)args["scaleFactor"], (int)args["nlevels"], (int)args["edgeThreshold"]);
+            detector_ = cv::xfeatures2d::SURF::create(det_args["hessianThreshold"], (int)det_args["nOctave"], (int)det_args["nOctaveLayers"]);
         }
     }
-    else if (type == "BRISK")
+    else if (detector_type == "ORB")
     {
-        if (args.find("thresh") == args.end())
+        if (det_args.find("scaleFactor") == det_args.end())
+        {
+            detector_ = cv::ORB::create((int)det_args["nfeatures"]);
+        }
+        else if (det_args.find("nlevels") == det_args.end())
+        {
+            detector_ = cv::ORB::create((int)det_args["nfeatures"], (int)det_args["scaleFactor"]);
+        }
+        else if (det_args.find("edgeThreshold") == det_args.end())
+        {
+            detector_ = cv::ORB::create((int)det_args["nfeatures"], (int)det_args["scaleFactor"], (int)det_args["nlevels"]);
+        }
+        else
+        {
+            detector_ = cv::ORB::create((int)det_args["nfeatures"], (int)det_args["scaleFactor"], (int)det_args["nlevels"], (int)det_args["edgeThreshold"]);
+        }
+    }
+    else if (detector_type == "BRISK")
+    {
+        if (det_args.find("thresh") == det_args.end())
         {
             detector_ = cv::BRISK::create();
         }
-        else if (args.find("octaves") == args.end())
+        else if (det_args.find("octaves") == det_args.end())
         {
-            detector_ = cv::BRISK::create((int)args["thresh"]);
+            detector_ = cv::BRISK::create((int)det_args["thresh"]);
         }
-        else if (args.find("patternScale") == args.end())
+        else if (det_args.find("patternScale") == det_args.end())
         {
-            detector_ = cv::BRISK::create((int)args["thresh"], (int)args["octaves"]);
+            detector_ = cv::BRISK::create((int)det_args["thresh"], (int)det_args["octaves"]);
         }
         else
         {
-            detector_ = cv::BRISK::create((int)args["thresh"], (int)args["octaves"], args["patternScale"]);
+            detector_ = cv::BRISK::create((int)det_args["thresh"], (int)det_args["octaves"], det_args["patternScale"]);
         }
     }
-    else if (type == "STAR")
+    else if (detector_type == "STAR")
     {
-        if (args.find("maxSize") == args.end())
+        if (det_args.find("maxSize") == det_args.end())
         {
             detector_ = cv::xfeatures2d::StarDetector::create();
         }
-        else if (args.find("responseThrehsold") == args.end())
+        else if (det_args.find("responseThrehsold") == det_args.end())
         {
-            detector_ = cv::xfeatures2d::StarDetector::create((int)args["maxSize"]);
+            detector_ = cv::xfeatures2d::StarDetector::create((int)det_args["maxSize"]);
         }
         else
         {
-            detector_ = cv::xfeatures2d::StarDetector::create((int)args["maxSize"], (int)args["responseThreshold"]);
+            detector_ = cv::xfeatures2d::StarDetector::create((int)det_args["maxSize"], (int)det_args["responseThreshold"]);
         }
     }
-    else if (type == "AKAZE")
+    else if (detector_type == "AKAZE")
     {
-        if (args.find("threshold") == args.end())
+        if (det_args.find("threshold") == det_args.end())
         {
             detector_ = cv::AKAZE::create(cv::AKAZE::DESCRIPTOR_MLDB, 0, 3);
         }
-        else if (args.find("nOctaves") == args.end())
+        else if (det_args.find("nOctaves") == det_args.end())
         {
-            detector_ = cv::AKAZE::create(cv::AKAZE::DESCRIPTOR_MLDB, 0, 3, args["threshold"]);
+            detector_ = cv::AKAZE::create(cv::AKAZE::DESCRIPTOR_MLDB, 0, 3, det_args["threshold"]);
         }
-        else if (args.find("nOctavesLayers") == args.end())
+        else if (det_args.find("nOctavesLayers") == det_args.end())
         {
-            detector_ = cv::AKAZE::create(cv::AKAZE::DESCRIPTOR_MLDB, 0, 3, args["threshold"], (int)args["nOctaves"]);
+            detector_ = cv::AKAZE::create(cv::AKAZE::DESCRIPTOR_MLDB, 0, 3, det_args["threshold"], (int)det_args["nOctaves"]);
+        }
+        else if (det_args.find("diffusivity") == det_args.end())
+        {
+            detector_ = cv::AKAZE::create(cv::AKAZE::DESCRIPTOR_MLDB, 0, 3, det_args["threshold"], (int)det_args["nOctaves"], (int)det_args["nOctaveLayers"]);
         }
         else
         {
-            detector_ = cv::AKAZE::create(cv::AKAZE::DESCRIPTOR_MLDB, 0, 3, args["threshold"], (int)args["nOctaves"], (int)args["nOctaveLayers"]);
+            detector_ = cv::AKAZE::create(cv::AKAZE::DESCRIPTOR_MLDB, 0, 3, det_args["threshold"], (int)det_args["nOctaves"], (int)det_args["nOctaveLayers"], (int)det_args["diffusivity"]);
         }
     }
-    else if (type == "KAZE")
+    else if (detector_type == "KAZE")
     {
-        if (args.find("threshold") == args.end())
+        if (det_args.find("threshold") == det_args.end())
         {
             detector_ = cv::KAZE::create(false, false);
         }
-        else if (args.find("nOctaves") == args.end())
+        else if (det_args.find("nOctaves") == det_args.end())
         {
-            detector_ = cv::KAZE::create(false, false, args["threshold"]);
+            detector_ = cv::KAZE::create(false, false, det_args["threshold"]);
         }
-        else if (args.find("nOctavesLayers") == args.end())
+        else if (det_args.find("nOctavesLayers") == det_args.end())
         {
-            detector_ = cv::KAZE::create(false, false, args["threshold"], (int)args["nOctaves"]);
+            detector_ = cv::KAZE::create(false, false, det_args["threshold"], (int)det_args["nOctaves"]);
+        }
+        else if (det_args.find("diffusivity") == det_args.end())
+        {
+            detector_ = cv::KAZE::create(false, false, det_args["threshold"], (int)det_args["nOctaves"], (int)det_args["nOctaveLayers"]);
         }
         else
         {
-            detector_ = cv::KAZE::create(false, false, args["threshold"], (int)args["nOctaves"], (int)args["nOctaveLayers"]);
+            detector_ = cv::KAZE::create(false, false, det_args["threshold"], (int)det_args["nOctaves"], (int)det_args["nOctaveLayers"], (int)det_args["diffusivity"]);
         }
     }
-    else if (type == "AGAST")
+    else if (detector_type == "AGAST")
     {
-        if (args.find("threshold") == args.end())
+        if (det_args.find("threshold") == det_args.end())
         {
             detector_ = cv::AgastFeatureDetector::create();
         }
         else
         {
-            detector_ = cv::AgastFeatureDetector::create((int)args["threshold"]);
+            detector_ = cv::AgastFeatureDetector::create((int)det_args["threshold"]);
         }
+    }
+
+    if (descriptor_type == "SIFT")
+    {
+        if (desc_args.find("nOctaveLayers") == desc_args.end())
+        {
+            descriptor_ = cv::xfeatures2d::SIFT::create();
+        }
+        else if (desc_args.find("sigma") == desc_args.end())
+        {
+            descriptor_ = cv::xfeatures2d::SIFT::create(0, (int)desc_args["nOctaveLayers"]);
+        }
+        else
+        {
+            descriptor_ = cv::xfeatures2d::SIFT::create(0, (int)desc_args["nOctaveLayers"], 0.04, 10, desc_args["sigma"]);
+        }
+    }
+    else if (descriptor_type == "SURF")
+    {
+        if (desc_args.find("nOctaves") == desc_args.end())
+        {
+            descriptor_ = cv::xfeatures2d::SURF::create();
+        }
+        else if (desc_args.find("nOctaveLayers") == desc_args.end())
+        {
+            descriptor_ = cv::xfeatures2d::SURF::create(100, (int)desc_args["nOctaves"]);
+        }
+        else
+        {
+            descriptor_ = cv::xfeatures2d::SURF::create(100, (int)desc_args["nOctave"], (int)desc_args["nOctaveLayers"]);
+        }
+    }
+    else if (descriptor_type == "ORB")
+    {
+        if (desc_args.find("scaleFactor") == desc_args.end())
+        {
+            descriptor_ = cv::ORB::create();
+        }
+        else if (desc_args.find("nlevels") == desc_args.end())
+        {
+            descriptor_ = cv::ORB::create(500, (int)desc_args["scaleFactor"]);
+        }
+        else if (desc_args.find("WTA_K") == desc_args.end())
+        {
+            descriptor_ = cv::ORB::create(500, (int)desc_args["scaleFactor"], (int)desc_args["nlevels"]);
+        }
+        else if (desc_args.find("patchSize") == desc_args.end())
+        {
+            descriptor_ = cv::ORB::create(500, (int)desc_args["scaleFactor"], (int)desc_args["nlevels"], 31, 0, (int)desc_args["WTA_K"]);
+        }
+        else
+        {
+            descriptor_ = cv::ORB::create(500, (int)desc_args["scaleFactor"], (int)desc_args["nlevels"], 31, 0, (int)desc_args["WTA_K"], cv::ORB::HARRIS_SCORE, (int)desc_args["patchSize"]);
+        }
+    }
+    else if (descriptor_type == "BRISK")
+    {
+        if (desc_args.find("octaves") == desc_args.end())
+        {
+            descriptor_ = cv::BRISK::create();
+        }
+        else if (desc_args.find("patternScale") == desc_args.end())
+        {
+            descriptor_ = cv::BRISK::create(30, (int)desc_args["octaves"]);
+        }
+        else
+        {
+            descriptor_ = cv::BRISK::create(30, (int)desc_args["octaves"], desc_args["patternScale"]);
+        }
+    }
+    else if (descriptor_type == "AKAZE")
+    {
+        if (desc_args.find("nOctaves") == desc_args.end())
+        {
+            descriptor_ = cv::AKAZE::create();
+        }
+        else if (desc_args.find("nOctavesLayers") == desc_args.end())
+        {
+            descriptor_ = cv::AKAZE::create(cv::AKAZE::DESCRIPTOR_MLDB, 0, 3, 0.001f, (int)desc_args["nOctaves"]);
+        }
+        else if (desc_args.find("diffusivity") == desc_args.end())
+        {
+            descriptor_ = cv::AKAZE::create(cv::AKAZE::DESCRIPTOR_MLDB, 0, 3, 0.001f, (int)desc_args["nOctaves"], (int)desc_args["nOctaveLayers"]);
+        }
+        else
+        {
+            descriptor_ = cv::AKAZE::create(cv::AKAZE::DESCRIPTOR_MLDB, 0, 3, 0.001f, (int)desc_args["nOctaves"], (int)desc_args["nOctaveLayers"], (int)desc_args["diffusivity"]);
+        }
+    }
+    else if (descriptor_type == "KAZE")
+    {
+        if (desc_args.find("nOctaves") == desc_args.end())
+        {
+            descriptor_ = cv::KAZE::create();
+        }
+        else if (desc_args.find("nOctavesLayers") == desc_args.end())
+        {
+            descriptor_ = cv::KAZE::create(false, false, 0.001f, (int)desc_args["nOctaves"]);
+        }
+        else if (desc_args.find("diffusivity") == desc_args.end())
+        {
+            descriptor_ = cv::KAZE::create(false, false, desc_args["threshold"], (int)desc_args["nOctaves"], (int)desc_args["nOctaveLayers"]);
+        }
+        else
+        {
+            descriptor_ = cv::KAZE::create(false, false, desc_args["threshold"], (int)desc_args["nOctaves"], (int)desc_args["nOctaveLayers"], (int)desc_args["diffusivity"]);
+        }
+    }
+    else if (descriptor_type == "DAISY")
+    {
+        if (desc_args.find("radius") == desc_args.end())
+        {
+            descriptor_ = cv::xfeatures2d::DAISY::create(15, 3, 8, 8, cv::xfeatures2d::DAISY::NRM_NONE, cv::noArray(), true, true);
+        }
+        else if (desc_args.find("q_radius") == desc_args.end())
+        {
+            descriptor_ = cv::xfeatures2d::DAISY::create((int)desc_args["radius"], 3, 8, 8, cv::xfeatures2d::DAISY::NRM_NONE, cv::noArray(), true, true);
+        }
+        else if (desc_args.find("q_theta") == desc_args.end())
+        {
+            descriptor_ = cv::xfeatures2d::DAISY::create((int)desc_args["radius"], (int)desc_args["q_radius"], 8, 8, cv::xfeatures2d::DAISY::NRM_NONE, cv::noArray(), true, true);
+        }
+        else if (desc_args.find("q_hist") == desc_args.end())
+        {
+            descriptor_ = cv::xfeatures2d::DAISY::create((int)desc_args["radius"], (int)desc_args["q_radius"], (int)desc_args["q_theta"], 8, cv::xfeatures2d::DAISY::NRM_NONE, cv::noArray(), true, true);
+        }
+        else if (desc_args.find("norm") == desc_args.end())
+        {
+            descriptor_ = cv::xfeatures2d::DAISY::create((int)desc_args["radius"], (int)desc_args["q_radius"], (int)desc_args["q_theta"], (int)desc_args["q_hist"], cv::xfeatures2d::DAISY::NRM_NONE, cv::noArray(), true, true);
+        }
+        else
+        {
+            descriptor_ = cv::xfeatures2d::DAISY::create((int)desc_args["radius"], (int)desc_args["q_radius"], (int)desc_args["q_theta"], (int)desc_args["q_hist"], (int)desc_args["norm"], cv::noArray(), true, true);
+        }
+    }
+    else if (descriptor_type == "FREAK")
+    {
+        if (desc_args.find("patternScale") == desc_args.end())
+        {
+            descriptor_ = cv::xfeatures2d::FREAK::create(true, true);
+        }
+        else if (desc_args.find("nOctaves") == desc_args.end())
+        {
+            descriptor_ = cv::xfeatures2d::FREAK::create(true, true, desc_args["patternScale"]);
+        }
+        else
+        {
+            descriptor_ = cv::xfeatures2d::FREAK::create(true, true, desc_args["patternScale"], (int)desc_args["nOctaves"]);
+        }
+    }
+    else if (descriptor_type == "LATCH")
+    {
+        if (desc_args.find("bytes") == desc_args.end())
+        {
+            descriptor_ = cv::xfeatures2d::LATCH::create();
+        }
+        else if (desc_args.find("half_ssd_size") == desc_args.end())
+        {
+            descriptor_ = cv::xfeatures2d::LATCH::create((int)desc_args["bytes"]);
+        }
+        else if (desc_args.find("sigma") == desc_args.end())
+        {
+            descriptor_ = cv::xfeatures2d::LATCH::create((int)desc_args["bytes"], true, (int)desc_args["half_ssd_size"]);
+        }
+        else
+        {
+            descriptor_ = cv::xfeatures2d::LATCH::create((int)desc_args["bytes"], true, (int)desc_args["half_ssd_size"], desc_args["sigma"]);
+        }
+    }
+    else if (descriptor_type == "LUCID")
+    {
+        if (desc_args.find("lucid_kernel") == desc_args.end())
+        {
+            descriptor_= cv::xfeatures2d::LUCID::create();
+        }
+        else if (desc_args.find("blur_kernel") == desc_args.end())
+        {
+            descriptor_= cv::xfeatures2d::LUCID::create((int)desc_args["lucid_kernel"]);
+        }
+        else
+        {
+            descriptor_= cv::xfeatures2d::LUCID::create((int)desc_args["lucid_kernel"], (int)desc_args["blur_kernel"]);
+        }
+    }
+    else if (descriptor_type == "VGG")
+    {
+        if (desc_args.find("isigma") == desc_args.end())
+        {
+            descriptor_ = cv::xfeatures2d::VGG::create();
+        }
+        else if (desc_args.find("scale_factor") == desc_args.end())
+        {
+            descriptor_ = cv::xfeatures2d::VGG::create(cv::xfeatures2d::VGG::VGG_120, desc_args["isigma"]);
+        }
+        else
+        {
+            descriptor_ = cv::xfeatures2d::VGG::create(cv::xfeatures2d::VGG::VGG_120, desc_args["isigma"], true, true, desc_args["scale_factor"]);
+        }
+    }
+    else if (descriptor_type == "BOOST")
+    {
+        float scale = 1.5f;
+        if (detector_type == "KAZE" || detector_type == "SURF")
+        {
+            scale = 6.25f;
+        }
+        else if (detector_type == "SIFT")
+        {
+            scale = 6.75f;
+        }
+        else if (detector_type == "AKAZE" || detector_type == "AGAST" || detector_type == "FAST" || detector_type == "BRISK")
+        {
+            scale = 5.0f;
+        }
+        else if (detector_type == "ORB")
+        {
+            scale = 0.75f;
+        }
+        descriptor_ = cv::xfeatures2d::BoostDesc::create(cv::xfeatures2d::BoostDesc::BINBOOST_256, true, scale);
     }
 }
 
-int Detector::Detect(data::Frame &frame, std::vector<data::Landmark> &landmarks)
+Detector::Detector(std::string detector_type, std::map<std::string, double> args)
+    : Detector(detector_type, std::string(""), args, std::map<std::string, double>())
+{
+}
+
+Detector::Detector(const Detector &other)
+    : Detector(other.detectorType_, other.descriptorType_, other.detectorArgs_, other.descriptorArgs_)
+{
+}
+
+int Detector::Detect(data::Frame &frame, std::vector<data::Landmark> &landmarks) const
 {
     cv::Mat noarr;
     return DetectInRegion(frame, landmarks, noarr);
 }
 
-int Detector::DetectInRectangularRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, cv::Point2f start, cv::Point2f end)
+int Detector::DetectInRectangularRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, cv::Point2f start, cv::Point2f end) const
 {
     cv::Mat mask = cv::Mat::zeros(frame.GetImage().size(), CV_8U);
     mask(cv::Rect(start, end)) = 255;
     return DetectInRegion(frame, landmarks, mask);
 }
 
-int Detector::DetectInRadialRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, double start_r, double end_r, double start_t, double end_t)
+int Detector::DetectInRadialRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, double start_r, double end_r, double start_t, double end_t) const
 {
     cv::Mat mask = cv::Mat::zeros(frame.GetImage().size(), CV_8U);
     for (int i = 0; i < mask.rows; i++)
@@ -213,17 +458,44 @@ int Detector::DetectInRadialRegion(data::Frame &frame, std::vector<data::Landmar
     return DetectInRegion(frame, landmarks, mask);
 }
 
-int Detector::DetectInRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, cv::Mat &mask)
+int Detector::DetectInRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, cv::Mat &mask) const
 {
     bool compressed = frame.IsCompressed();
     std::vector<cv::KeyPoint> kpts;
     detector_->detect(frame.GetImage(), kpts, mask);
-    for (cv::KeyPoint kpt : kpts)
+    cv::Mat descs;
+    if (descriptor_.get() != nullptr)
     {
-        data::Feature feat(frame, kpt);
+        if (descriptorType_ == "LUCID")
+        {
+            cv::Mat rgb;
+            cv::cvtColor(frame.GetImage(), rgb, CV_GRAY2BGR);
+            descriptor_->compute(rgb, kpts, descs);
+        }
+        else
+        {
+            descriptor_->compute(frame.GetImage(), kpts, descs);
+        }
+    }
+    for (int i = 0; i < kpts.size(); i++)
+    {
+        cv::KeyPoint &kpt = kpts[i];
         data::Landmark landmark;
-        landmark.AddObservation(feat);
-        landmarks.push_back(landmark);
+        if (descriptor_.get() != nullptr)
+        {
+            cv::Mat desc = descs.row(i);
+            data::Feature feat(frame, kpt, desc);
+            landmark.AddObservation(feat);
+        }
+        else
+        {
+            data::Feature feat(frame, kpt);
+            landmark.AddObservation(feat);
+        }
+        #pragma omp critical
+        {
+            landmarks.push_back(landmark);
+        }
     }
     if (compressed)
     {
@@ -232,10 +504,46 @@ int Detector::DetectInRegion(data::Frame &frame, std::vector<data::Landmark> &la
     return kpts.size();
 }
 
+std::string Detector::GetDetectorType()
+{
+    return detectorType_;
+}
+
+std::string Detector::GetDescriptorType()
+{
+    return descriptorType_;
+}
+
 bool Detector::IsDetectorTypeValid(std::string name)
 {
     std::vector<std::string> valid = {"GFTT", "FAST", "SIFT", "SURF", "ORB", "BRISK", "STAR", "AKAZE", "KAZE", "AGAST"};
     return std::find(valid.begin(), valid.end(), name) != valid.end();
+}
+
+bool Detector::IsDescriptorTypeValid(std::string name)
+{
+    std::vector<std::string> valid = {"SIFT", "SURF", "ORB", "BRISK", "AKAZE", "KAZE", "DAISY", "FREAK", "LATCH", "LUCID", "VGG", "BOOST"};
+    return std::find(valid.begin(), valid.end(), name) != valid.end();
+}
+
+bool Detector::IsDetectorDescriptorCombinationValid(std::string det, std::string desc){
+    if (!IsDetectorTypeValid(det) || !IsDescriptorTypeValid(desc))
+    {
+        return false;
+    }
+    if (desc == "KAZE" && det != "KAZE")
+    {
+        return false;
+    }
+    if (desc == "AKAZE" && det != "KAZE" && det != "AKAZE")
+    {
+        return false;
+    }
+    if (det == "SIFT" && desc == "ORB")
+    {
+        return false;
+    }
+    return true;
 }
 
 }
