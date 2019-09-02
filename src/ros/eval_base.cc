@@ -176,6 +176,7 @@ void EvalBase::Run()
         out.AddAttribute("bag_file", bagFile);
         out.AddAttribute("rate", rate);
         out.AddAttributes(cameraParams_);
+        out.AddAttribute("fov", cameraModel_->GetFOV() * 180 / M_PI);
         std::map<std::string, double> numAttr;
         if (GetAttributes(numAttr))
         {
