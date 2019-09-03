@@ -2,6 +2,8 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+import seaborn as sns
+import pandas
 import os
 from parse import parse
 import argparse
@@ -98,8 +100,10 @@ if not os.path.isdir(args.results_path) and args.results_path.endswith('.hdf5'):
     plt.show()
 
 elif os.path.isdir(args.results_path):
-    fig = plt.figure()
-    fig.suptitle('KLT Tracking Performance for Various FOVs and Motions')
+    fig1 = plt.figure(1)
+    fig2 = plt.figure(2)
+    fig1.suptitle('KLT Tracking Accuracy for Various FOVs and Motions')
+    fig2.suptitle('KLT Tracking Lifetime Distributions for Various FOVs and Motions')
     motion_count = 0
     fov_dict = dict()
     last_fov_num = 0
@@ -130,12 +134,14 @@ elif os.path.isdir(args.results_path):
     motion_inx = 0
     for motion in os.listdir(args.results_path):
         if os.path.isdir(os.path.join(args.results_path, motion)):
+            df = pandas.DataFrame()
             bag_dir = os.path.join(args.results_path, motion)
             for fov in os.listdir(bag_dir):
                 if os.path.isdir(os.path.join(bag_dir, fov)):
                     chi, alpha, fx, fy, cx, cy = parse('chi{:f}_alpha{:f}_fx{:f}_fy{:f}_cx{:f}_cy{:f}', fov)
                     failures = np.empty(shape=(1,0))
                     radial_errors = np.empty(shape=(0,2))
+                    track_lengths = np.empty(shape=(1,0))
                     file_exists = False
                     for filename in os.listdir(os.path.join(bag_dir, fov)):
                         if filename.endswith('.tracking.hdf5'):
@@ -143,25 +149,32 @@ elif os.path.isdir(args.results_path):
                             with h5py.File(results_file, 'r') as f:
                                 failures = np.hstack((failures, f['failures'][:]))
                                 radial_errors = np.vstack((radial_errors, f['radial_errors'][:]))
+                                tl = f['track_lengths'][:]
+                                track_lengths = np.hstack((track_lengths, tl[:, tl[0, :] > 0]))
                                 attrs = dict(f['attributes'].attrs.items())
                                 file_exists = True
                                 fov = int(round(attrs['fov']))
                     if file_exists:
-                        ax = fig.add_subplot(num_rows, num_cols, motion_inx * num_cols + fov_dict[fov] + 1)
+                        ax = fig1.add_subplot(num_rows, num_cols, motion_inx * num_cols + fov_dict[fov] + 1)
                         ax.hist([[r for r, e in radial_errors if e <= 5], [r for r, e in radial_errors if 5 < e <= 20], [r for r, e in radial_errors if 20 < e <= 50], [r for r in failures]], bins=[i * 0.05 for i in range(11)], alpha=0.5, label=['<5', '5-20', '20-50', 'Failures'], stacked=False)
                         ax.legend(loc='best', title='Pixel error', fontsize='x-small')
+
+                        if motion_inx == 0:
+                            ax.set_title('FOV {} degrees'.format(fov))
+                        elif motion_inx == num_rows - 1:
+                            ax.set_xlabel('Radial distance')
+                        if fov_dict[fov] == 0:
+                            ax.set_ylabel(motion, size='large')
+                        elif fov_dict[fov] == num_cols - 1:
+                            ax.set_ylabel('Number of tracks')
+                            ax.yaxis.set_label_position("right")
+
+                        df = df.append(pandas.DataFrame({'FOV': [fov for i in range(len(track_lengths[0]))], 'Track lifetime (frames)': track_lengths[0, :]}))
                     else:
                         print '[WARNING] No results files found in directory {}'.format(os.path.join(bag_dir, fov))
-
-                    if motion_inx == 0 and file_exists:
-                        ax.set_title('FOV {} degrees'.format(fov))
-                    elif motion_inx == num_rows - 1:
-                        ax.set_xlabel('Radial distance')
-                    if fov_dict[fov] == 0:
-                        ax.set_ylabel(motion, size='large')
-                    elif fov_dict[fov] == num_cols - 1:
-                        ax.set_ylabel('Number of tracks')
-                        ax.yaxis.set_label_position("right")
+            ax2 = fig2.add_subplot(num_rows, 1, motion_inx + 1)
+            sns.violinplot(x='FOV', y='Track lifetime (frames)', data=df, ax=ax2, palette="muted", inner='quart')
+            ax2.set_title('Motion {}'.format(motion))
             motion_inx += 1
     plt.show()
 

@@ -57,7 +57,7 @@ private:
     std::vector<std::unique_ptr<data::Frame>> frames_;
     std::vector<data::Landmark> landmarks_;
 
-    const std::vector<double> rs_{0, 0.1, 0.2, 0.3, 0.4, 0.5};
+    const std::vector<double> rs_{0, 0.1, 0.2, 0.3, 0.4, 0.49};
     const std::vector<double> ts_{-M_PI, -3 * M_PI / 4, -M_PI / 2, -M_PI / 4, 0, M_PI / 4, M_PI / 2, 3 * M_PI / 4, M_PI};
     int minFeaturesRegion_;
 
