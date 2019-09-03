@@ -111,7 +111,7 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
     {
         for (int j = 0; j < ts_.size() - 1; j++)
         {
-            if (regionCount[{i, j}] < minFeaturesRegion_)
+            if (regionCount.find({i, j}) == regionCount.end() || regionCount.at({i, j}) < minFeaturesRegion_)
             {
                 detector_->DetectInRadialRegion(*frames_.back(), landmarks_, rs_[i] * imsize, rs_[i+1] * imsize, ts_[j], ts_[j+1]);
             }

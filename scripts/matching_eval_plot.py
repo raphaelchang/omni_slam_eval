@@ -9,11 +9,11 @@ import argparse
 import os
 
 parser = argparse.ArgumentParser(description='Plot matching evaluation results')
-parser.add_argument('results_file',  help='matching results file, source bag file, or directory')
+parser.add_argument('results_path',  help='matching results file, source bag file, or working directory')
 args = parser.parse_args()
 
-if not os.path.isdir(args.results_file) and args.results_file.endswith('.hdf5'):
-    with h5py.File(args.results_file, 'r') as f:
+if not os.path.isdir(args.results_path) and args.results_path.endswith('.hdf5'):
+    with h5py.File(args.results_path, 'r') as f:
         stats = f['match_stats'][:]
         radial_overlaps_errors = f['radial_overlaps_errors'][:]
         good_radial_distances = f['good_radial_distances'][:]
@@ -97,7 +97,7 @@ if not os.path.isdir(args.results_file) and args.results_file.endswith('.hdf5'):
 
     plt.show()
 
-elif not os.path.isdir(args.results_file) and args.results_file.endswith('.bag'):
+elif not os.path.isdir(args.results_path) and args.results_path.endswith('.bag'):
     radial_overlaps_errors = dict()
     good_radial_distances = dict()
     bad_radial_distances = dict()
@@ -108,9 +108,9 @@ elif not os.path.isdir(args.results_file) and args.results_file.endswith('.bag')
     prec = dict()
     rec = dict()
     detdesclist = []
-    for filename in os.listdir(os.path.dirname(args.results_file)):
-        if filename.startswith(os.path.basename(args.results_file)) and filename.endswith('.matching.hdf5'):
-            with h5py.File(os.path.join(os.path.dirname(args.results_file), filename), 'r') as f:
+    for filename in os.listdir(os.path.dirname(args.results_path)):
+        if filename.startswith(os.path.basename(args.results_path)) and filename.endswith('.matching.hdf5'):
+            with h5py.File(os.path.join(os.path.dirname(args.results_path), filename), 'r') as f:
                 attrs = dict(f['attributes'].attrs.items())
                 detdesc = (attrs['detector_type'], attrs['descriptor_type'])
                 detdesclist.append(detdesc)
@@ -138,6 +138,7 @@ elif not os.path.isdir(args.results_file) and args.results_file.endswith('.bag')
         ax1.set_prop_cycle(color=[cm(1. * i / len(detdesclist)) for i in range(len(detdesclist))])
         ax2.set_prop_cycle(color=[cm(1. * i / len(detdesclist)) for i in range(len(detdesclist))])
         ax3.set_prop_cycle(color=[cm(1. * i / len(detdesclist)) for i in range(len(detdesclist))])
+        ax4.set_prop_cycle(color=[cm(1. * i / len(detdesclist)) for i in range(len(detdesclist))])
 
         handles = []
         for detdesc in detdesclist:
@@ -170,6 +171,7 @@ elif not os.path.isdir(args.results_file) and args.results_file.endswith('.bag')
         ax3.set_title('ROC curve')
         ax3.set_xlabel('False positive rate')
         ax3.set_ylabel('True positive rate')
+        handles = []
         for detdesc in detdesclist:
             rocc = roc[detdesc][roc[detdesc][:, 0] == 0]
             color = next(ax3._get_lines.prop_cycler)['color']
@@ -180,10 +182,29 @@ elif not os.path.isdir(args.results_file) and args.results_file.endswith('.bag')
         l1 = ax3.legend(handles, ['{}+{}'.format(det, desc) for det, desc in detdesclist], loc=1, title='Detector+Descriptor', fontsize='small')
         ax3.add_artist(l1)
 
+        df = pd.DataFrame()
+        for detdesc in detdesclist:
+            df = df.append(pd.DataFrame({'Detector+Descriptor': ['{}+{}'.format(detdesc[0], detdesc[1]) for i in range(len(good_radial_distances[detdesc]))], 'Delta radial distance': good_radial_distances[detdesc][:, 0]}))
+        sns.violinplot(x='Detector+Descriptor', y='Delta radial distance', data=df, ax=ax4, palette="muted")
+        ax4.grid(which='major', linestyle='--', axis='y', linewidth=0.5)
+        ax4.set_axisbelow(True)
+        ax4.set_title('Distribution of matches over changes in radial distance')
+
+        df = pd.DataFrame()
+        for detdesc in detdesclist:
+            matches = np.hstack((good_radial_distances[detdesc][:, 1], bad_radial_distances[detdesc][:, 1]))
+            matches /= matches.max()
+            df = df.append(pd.DataFrame({'Detector+Descriptor': ['{}+{}'.format(detdesc[0], detdesc[1]) for i in range(len(matches))], 'Normalized descriptor distance': matches, 'Match': ['Good' for i in range(len(good_radial_distances[detdesc]))] + ['Bad' for i in range(len(bad_radial_distances[detdesc]))]}))
+        sns.violinplot(x="Detector+Descriptor", y="Normalized descriptor distance", hue="Match", data=df, split=True, ax=ax5, palette="Set2", inner="quart")
+        handles, labels = ax5.get_legend_handles_labels()
+        ax5.legend(handles=handles[0:], labels=labels[0:], fontsize='small')
+        ax5.set_title('Distribution of good and bad matches over descriptor distances')
+
         plt.show()
 
     else:
         print "[ERROR] Bag filename had no associated results files"
+
 else:
     print "[ERROR] Invalid path specified"
 

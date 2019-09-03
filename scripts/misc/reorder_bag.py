@@ -16,7 +16,7 @@ def reorder_bag(bagfile):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Reorder a bagfile based on header timestamps.')
-    parser.add_argument('bagfile', nargs=1, help='input bag file')
+    parser.add_argument('bagfile', help='input bag file')
     args = parser.parse_args()
     reorder_bag(args.bagfile)
 
