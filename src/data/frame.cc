@@ -105,6 +105,16 @@ const camera::CameraModel& Frame::GetCameraModel() const
     return cameraModel_;
 }
 
+const Matrix<double, 3, 4>& Frame::GetEstimatedPose() const
+{
+    return poseEstimate_;
+}
+
+const Matrix<double, 3, 4>& Frame::GetEstimatedInversePose() const
+{
+    return invPoseEstimate_;
+}
+
 void Frame::SetPose(Matrix<double, 3, 4> &pose)
 {
     pose_ = pose;
@@ -126,6 +136,13 @@ void Frame::SetDepthImage(cv::Mat &depth_image)
     hasDepth_ = true;
 }
 
+void Frame::SetEstimatedPose(Matrix<double, 3, 4> &pose)
+{
+    poseEstimate_ = pose;
+    invPoseEstimate_ = util::TFUtil::InversePoseMatrix(pose);
+    hasPoseEstimate_ = true;
+}
+
 bool Frame::HasPose() const
 {
     return hasPose_;
@@ -134,6 +151,11 @@ bool Frame::HasPose() const
 bool Frame::HasDepthImage() const
 {
     return hasDepth_;
+}
+
+bool Frame::HasEstimatedPose() const
+{
+    return hasPoseEstimate_;
 }
 
 void Frame::CompressImages()

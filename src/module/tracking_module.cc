@@ -125,6 +125,11 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
     frameNum_++;
 }
 
+std::vector<data::Landmark>& TrackingModule::GetLandmarks()
+{
+    return landmarks_;
+}
+
 TrackingModule::Stats& TrackingModule::GetStats()
 {
     return stats_;

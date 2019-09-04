@@ -32,6 +32,8 @@ public:
 
     void Update(std::unique_ptr<data::Frame> &frame);
 
+    std::vector<data::Landmark>& GetLandmarks();
+
     Stats& GetStats();
     void Visualize(cv::Mat &base_img);
 

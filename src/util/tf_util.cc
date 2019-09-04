@@ -29,10 +29,20 @@ Matrix<double, 3, 4> TFUtil::InversePoseMatrix(Matrix<double, 3, 4> poseMat)
     return invMat;
 }
 
+Matrix3d TFUtil::GetRotationFromPoseMatrix(Matrix<double, 3, 4> poseMat)
+{
+    return poseMat.block<3, 3>(0, 0);
+}
+
 Vector3d TFUtil::TransformPoint(Matrix<double, 3, 4> tf, Vector3d pt)
 {
     Vector4d pt_h = pt.homogeneous();
     return tf * pt_h;
+}
+
+Vector3d TFUtil::RotatePoint(Matrix3d rot, Vector3d pt)
+{
+    return rot * pt;
 }
 
 Matrix<double, 3, 4> TFUtil::QuaternionTranslationToPoseMatrix(Quaterniond quat, Vector3d translation)

@@ -49,6 +49,7 @@ include_directories(
 add_library(omni_slam_eval_lib
   src/module/tracking_module.cc
   src/module/matching_module.cc
+  src/module/reconstruction_module.cc
   src/data/frame.cc
   src/data/feature.cc
   src/data/landmark.cc
@@ -57,6 +58,7 @@ add_library(omni_slam_eval_lib
   src/feature/tracker.cc
   src/feature/detector.cc
   src/feature/matcher.cc
+  src/reconstruction/triangulator.cc
   src/util/tf_util.cc
   src/util/math_util.cc
   src/util/hdf_file.cc
@@ -74,6 +76,13 @@ add_executable(omni_slam_matching_eval_node
     src/omni_slam_matching_eval_node.cc
 )
 
+add_executable(omni_slam_reconstruction_eval_node
+    src/ros/reconstruction_eval.cc
+    src/ros/tracking_eval.cc
+    src/ros/eval_base.cc
+    src/omni_slam_reconstruction_eval_node.cc
+)
+
 target_link_libraries(omni_slam_tracking_eval_node PUBLIC omni_slam_eval_lib
   ${catkin_LIBRARIES}
   ${OpenCV_LIBS}
@@ -88,8 +97,16 @@ target_link_libraries(omni_slam_matching_eval_node PUBLIC omni_slam_eval_lib
   ${OpenMP_CXX_FLAGS}
 )
 
+target_link_libraries(omni_slam_reconstruction_eval_node PUBLIC omni_slam_eval_lib
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBS}
+  ${HDF5_CXX_LIBRARIES}
+  ${OpenMP_CXX_FLAGS}
+)
+
 target_compile_options(omni_slam_tracking_eval_node PUBLIC ${OpenMP_CXX_FLAGS})
 target_compile_options(omni_slam_matching_eval_node PUBLIC ${OpenMP_CXX_FLAGS})
+target_compile_options(omni_slam_reconstruction_eval_node PUBLIC ${OpenMP_CXX_FLAGS})
 set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS})
 
 install(TARGETS omni_slam_tracking_eval_node
@@ -99,6 +116,12 @@ install(TARGETS omni_slam_tracking_eval_node
 )
 
 install(TARGETS omni_slam_matching_eval_node
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+install(TARGETS omni_slam_reconstruction_eval_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

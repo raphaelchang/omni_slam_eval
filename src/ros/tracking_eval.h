@@ -20,16 +20,17 @@ public:
     TrackingEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &nh_private);
     TrackingEval() : TrackingEval(::ros::NodeHandle(), ::ros::NodeHandle("~")) {}
 
-private:
-    void InitPublishers();
+protected:
+    virtual void InitPublishers();
 
-    void ProcessFrame(std::unique_ptr<data::Frame> &&frame);
-    void GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data);
-    void Visualize(cv_bridge::CvImagePtr &base_img);
-
-    image_transport::Publisher trackedImagePublisher_;
+    virtual void ProcessFrame(std::unique_ptr<data::Frame> &&frame);
+    virtual void GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data);
+    virtual void Visualize(cv_bridge::CvImagePtr &base_img);
 
     std::unique_ptr<module::TrackingModule> trackingModule_;
+
+private:
+    image_transport::Publisher trackedImagePublisher_;
 };
 
 }

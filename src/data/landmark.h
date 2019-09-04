@@ -23,14 +23,20 @@ public:
     const int GetFirstFrameID() const;
     const int GetNumObservations() const;
     const Feature* GetObservationByFrameID(const int frame_id) const;
+    void SetEstimatedPosition(Vector3d pos);
 
     Vector3d GetGroundTruth() const;
+    Vector3d GetEstimatedPosition() const;
     bool HasGroundTruth() const;
+    bool HasEstimatedPosition() const;
+
 private:
     std::vector<Feature> obs_;
     std::map<int, int> idToIndex_;
     Vector3d groundTruth_;
-    bool hasGroundTruth_;
+    Vector3d posEstimate_;
+    bool hasGroundTruth_{false};
+    bool hasPosEstimate_{false};
 };
 
 }

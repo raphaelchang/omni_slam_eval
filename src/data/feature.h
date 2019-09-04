@@ -22,6 +22,7 @@ public:
     const cv::KeyPoint& GetKeypoint() const;
     const cv::Mat& GetDescriptor() const;
 
+    Vector3d GetBearing() const;
     Vector3d GetWorldPoint();
     bool HasWorldPoint() const;
 
