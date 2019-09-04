@@ -136,7 +136,10 @@ void MatchingModule::Update(std::unique_ptr<data::Frame> &frame)
             data::Landmark &prevLandmark = *it2;
             const data::Feature &curFeat = curLandmark.GetObservations()[0];
             const data::Feature &prevFeat = prevLandmark.GetObservations()[0];
-            featuresInId[prevFeat.GetFrame().GetID()]++;
+            #pragma omp critical
+            {
+                featuresInId[prevFeat.GetFrame().GetID()]++;
+            }
             Vector2d prevFeatPix;
             if (frames_.back()->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(frames_.back()->GetInversePose(), prevLandmark.GetGroundTruth())), prevFeatPix))
             {

@@ -11,13 +11,13 @@ args = parser.parse_args()
 
 d_list = [('SIFT','SIFT'), ('SURF','SURF'), ('ORB','ORB'), ('BRISK','BRISK'), ('AKAZE', 'AKAZE'), ('KAZE', 'KAZE'), ('SIFT','FREAK'), ('SIFT','DAISY'), ('SIFT','LUCID'), ('SIFT','LATCH'), ('SIFT','VGG'), ('SIFT','BOOST')]
 det_param_map = dict()
-det_param_map['SIFT'] = '{nfeatures: 2000}'
+det_param_map['SIFT'] = '{nfeatures: 5000}'
 det_param_map['SURF'] = '{hessianThreshold: 500}'
 det_param_map['ORB'] = '{nfeatures: 100}'
-det_param_map['BRISK'] = '{thresh: 30}'
-det_param_map['AGAST'] = '{threshold: 10}'
-det_param_map['AKAZE'] = '{threshold: 0.001}'
-det_param_map['KAZE'] = '{threshold: 0.001}'
+det_param_map['BRISK'] = '{thresh: 35}'
+det_param_map['AGAST'] = '{threshold: 25}'
+det_param_map['AKAZE'] = '{threshold: 0.0005}'
+det_param_map['KAZE'] = '{threshold: 0.0005}'
 
 parent = roslaunch.parent.ROSLaunchParent("", [], is_core=True)
 parent.start()
