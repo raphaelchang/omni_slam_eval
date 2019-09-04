@@ -40,11 +40,12 @@ if not os.path.isdir(args.results_path) and args.results_path.endswith('.hdf5'):
 
     ax1.set_prop_cycle(color=[cm(1. * i / numdesc) for i in range(numdesc)])
     color = next(ax1._get_lines.prop_cycler)['color']
-    ax1.plot(framediff * attrs["rate"][0], prec, color=color)
-    ax1.plot(framediff * attrs["rate"][0], rec, linestyle='dashed', color=color)
+    ax1.plot(framediff * attrs["rate"][0], prec, color=color, label='Precision')
+    ax1.plot(framediff * attrs["rate"][0], rec, linestyle='dashed', color=color, label='Recall')
     ax1.set_xlabel('Frame difference')
     ax1.set_ylabel('Precision / recall')
     ax1.set_title('Precision-recall over frame difference')
+    ax1.legend(loc=1, fontsize='small')
 
     ax2.set_prop_cycle(color=[cm(1. * i / numdesc) for i in range(numdesc)])
     color = next(ax2._get_lines.prop_cycler)['color']
