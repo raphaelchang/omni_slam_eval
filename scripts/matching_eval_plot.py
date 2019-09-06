@@ -66,6 +66,8 @@ if not os.path.isdir(args.results_path) and args.results_path.endswith('.hdf5'):
     color = next(ax3._get_lines.prop_cycler)['color']
     for i in range(1, maxz):
         y, x = np.absolute(roc[roc[:, 1] == i][:, 2:].T)
+        if len(x) == 0 or len(y) == 0:
+            continue
         maxx = max(maxx, max(x))
         maxy = max(maxy, max(y))
         ax3.plot(x, y, i, color=color)

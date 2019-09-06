@@ -18,6 +18,8 @@ DoubleSphere::DoubleSphere(const double fx, const double fy, const double cx, co
 {
     cameraMat_ << fx_, 0, cx_, 0, fy_, cy_, 0, 0, 1;
     fov_ = GetFOV();
+    double theta = M_PI / 2 - fov_ / 2;
+    sinTheta_ = sin(theta);
 }
 
 bool DoubleSphere::ProjectToImage(const Vector3d &bearing, Vector2d &pixel) const
@@ -28,20 +30,36 @@ bool DoubleSphere::ProjectToImage(const Vector3d &bearing, Vector2d &pixel) cons
 
     double d1 = bearing.norm();
     double d2 = sqrt(x * x + y * y + (chi_ * d1 + z) * (chi_ * d1 + z));
-    double w1 = 0;
-    if (alpha_ <= 0.5 && alpha_ > 0)
-    {
-        w1 = alpha_ / (1 - alpha_);
-    }
-    else if (alpha_ > 0.5)
-    {
-        w1 = (1 - alpha_) / alpha_;
-    }
+    //double w1 = 0;
+    //if (alpha_ <= 0.5 && alpha_ >= 0)
+    //{
+        //w1 = alpha_ / (1 - alpha_);
+    //}
+    //else if (alpha_ > 0.5)
+    //{
+        //w1 = (1 - alpha_) / alpha_;
+    //}
     //double w2 = (w1 + chi_) / sqrt(2 * w1 * chi_ + chi_ * chi_ + 1);
     //if (z <= -w2 * d1)
     //{
-    //    return false;
+        //return false;
     //}
+    if (alpha_ > 0.5)
+    {
+        if (z <= sinTheta_ * d1)
+        {
+            return false;
+        }
+    }
+    else
+    {
+        double w1 = alpha_ / (1 - alpha_);
+        double w2 = (w1 + chi_) / sqrt(2 * w1 * chi_ + chi_ * chi_ + 1);
+        if (z <= -w2 * d1)
+        {
+            return false;
+        }
+    }
 
     Vector3d bearing_h;
     bearing_h << x, y, (alpha_ * d2 + (1 - alpha_) * (chi_ * d1 + z));
@@ -50,14 +68,6 @@ bool DoubleSphere::ProjectToImage(const Vector3d &bearing, Vector2d &pixel) cons
     if (pixel(0) > 2 * cx_ || pixel(0) < 0 || pixel(1) > 2 * cy_ || pixel(1) < 0)
     {
         return false;
-    }
-    if (alpha_ > 0.5)
-    {
-        double theta = M_PI / 2 - fov_ / 2;
-        if (z <= sin(theta) * d1)
-        {
-            return false;
-        }
     }
     return true;
 }

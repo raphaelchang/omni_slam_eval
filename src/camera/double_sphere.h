@@ -25,6 +25,7 @@ private:
     double chi_;
     double alpha_;
     double fov_;
+    double sinTheta_;
     Matrix3d cameraMat_;
 };
 

@@ -44,6 +44,7 @@ private:
         void AddDetections(std::vector<cv::KeyPoint> kpt);
         void AddGoodMatch(cv::KeyPoint query_kpt, cv::KeyPoint train_kpt, double overlap);
         void AddBadMatch(cv::KeyPoint query_kpt, cv::KeyPoint train_kpt);
+        void AddBadMatch(cv::KeyPoint query_kpt);
         void AddCorrespondence(cv::KeyPoint query_kpt, cv::KeyPoint train_kpt);
         void Draw(cv::Mat &img);
 

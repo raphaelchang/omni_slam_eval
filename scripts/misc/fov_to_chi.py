@@ -1,7 +1,7 @@
 import math
 
-fov=190
-alpha=0.006
+fov=360
+alpha=0.666667
 
 d = (180. - fov) / 2. * math.pi / 180.
 a = max(min(alpha, 1.), 0.5)

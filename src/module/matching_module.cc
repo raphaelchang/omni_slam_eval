@@ -33,7 +33,7 @@ void MatchingModule::Update(std::unique_ptr<data::Frame> &frame)
     for (int i = 0; i < rs_.size() - 1; i++)
     {
         for (int j = 0; j < ts_.size() - 1; j++)
-        {   
+        {
             feature::Detector detector(*detector_);
             detector.DetectInRadialRegion(*frames_.back(), curLandmarks, rs_[i] * imsize, rs_[i+1] * imsize, ts_[j], ts_[j+1]);
         }
@@ -73,21 +73,22 @@ void MatchingModule::Update(std::unique_ptr<data::Frame> &frame)
         for (int i = 1; i < match.GetNumObservations(); i++)
         {
             data::Feature &prevFeat = match.GetObservations()[i];
+            Vector2d curPix;
+            curPix << curFeat.GetKeypoint().pt.x, curFeat.GetKeypoint().pt.y;
+            double descDist = distances[std::distance(matches.begin(), it)][i - 1];
+            double x = curPix(0) - frames_.back()->GetImage().cols / 2. + 0.5;
+            double y = curPix(1) - frames_.back()->GetImage().rows / 2. + 0.5;
+            double r = sqrt(x * x + y * y) / imsize;
+            double x_prev = prevFeat.GetKeypoint().pt.x - frames_.back()->GetImage().cols / 2. + 0.5;
+            double y_prev = prevFeat.GetKeypoint().pt.y - frames_.back()->GetImage().rows / 2. + 0.5;
+            double r_prev = sqrt(x_prev * x_prev + y_prev * y_prev) / imsize;
             Vector2d prevFeatPix;
             if (frames_.back()->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(frames_.back()->GetInversePose(), prevFeat.GetWorldPoint())), prevFeatPix))
             {
                 cv::KeyPoint kpt = prevFeat.GetKeypoint();
                 kpt.pt = cv::Point2f(prevFeatPix(0), prevFeatPix(1));
-                Vector2d curPix;
-                curPix << curFeat.GetKeypoint().pt.x, curFeat.GetKeypoint().pt.y;
                 double error = (curPix - prevFeatPix).norm();
                 double overlap = cv::KeyPoint::overlap(curFeat.GetKeypoint(), kpt);
-                double x = curPix(0) - frames_.back()->GetImage().cols / 2. + 0.5;
-                double y = curPix(1) - frames_.back()->GetImage().rows / 2. + 0.5;
-                double r = sqrt(x * x + y * y) / imsize;
-                double x_prev = prevFeat.GetKeypoint().pt.x - frames_.back()->GetImage().cols / 2. + 0.5;
-                double y_prev = prevFeat.GetKeypoint().pt.y - frames_.back()->GetImage().rows / 2. + 0.5;
-                double r_prev = sqrt(x_prev * x_prev + y_prev * y_prev) / imsize;
                 if (overlap > 0)
                 {
                     #pragma omp critical
@@ -95,7 +96,6 @@ void MatchingModule::Update(std::unique_ptr<data::Frame> &frame)
                         stats_.radialOverlapsErrors.emplace_back(vector<double>{r, overlap, error});
                     }
                 }
-                double descDist = distances[std::distance(matches.begin(), it)][i - 1];
                 if (overlap > overlapThresh_ && error < distThresh_)
                 {
                     #pragma omp critical
@@ -120,6 +120,18 @@ void MatchingModule::Update(std::unique_ptr<data::Frame> &frame)
                         }
                         stats_.badRadialDistances.emplace_back(vector<double>{fabs(r - r_prev), descDist});
                     }
+                }
+            }
+            else
+            {
+                #pragma omp critical
+                {
+                    badDists[{prevFeat.GetFrame().GetID(), curFeat.GetFrame().GetID()}].push(descDist);
+                    if (frameIdToNum_[prevFeat.GetFrame().GetID()] == 0)
+                    {
+                        visualization_.AddBadMatch(curFeat.GetKeypoint());
+                    }
+                    stats_.badRadialDistances.emplace_back(vector<double>{fabs(r - r_prev), descDist});
                 }
             }
         }
@@ -267,6 +279,13 @@ void MatchingModule::Visualization::AddBadMatch(cv::KeyPoint query_kpt, cv::KeyP
     cv::drawKeypoints(curMask_, vector<cv::KeyPoint>{query_kpt}, kptMat, cv::Scalar(0, 0, 255), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
     //cv::circle(kptMat, train_kpt.pt, 2, cv::Scalar(0, 0, 255), -1);
     cv::line(kptMat, query_kpt.pt, train_kpt.pt, cv::Scalar(0, 0, 255), 1);
+    curMask_ = kptMat;
+}
+
+void MatchingModule::Visualization::AddBadMatch(cv::KeyPoint query_kpt)
+{
+    cv::Mat kptMat;
+    cv::drawKeypoints(curMask_, vector<cv::KeyPoint>{query_kpt}, kptMat, cv::Scalar(0, 0, 255), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
     curMask_ = kptMat;
 }
 

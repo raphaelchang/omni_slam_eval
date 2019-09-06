@@ -3,7 +3,7 @@
     <arg name="results_file" default="$(arg bag_file).matching.hdf5" />
     <arg name="rate" default="1" />
     <arg name="camera_model" default="double_sphere" />
-    <arg name="camera_params" default="{fx: 295.936, fy: 295.936, cx: 512, cy: 512, chi: 0.3, alpha: 0.6666667}" />
+    <arg name="camera_params" default="{fx: 1024, fy: 1024, cx: 512, cy: 512, chi: 0.0, alpha: 0.0}" />
     <arg name="detector_type" default="ORB" />
     <arg name="detector_params" default="{nfeatures: 100}" />
     <arg name="descriptor_type" default="ORB" />
