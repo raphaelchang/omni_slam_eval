@@ -3,6 +3,9 @@
 #include "reconstruction/triangulator.h"
 #include "module/tracking_module.h"
 
+#include <pcl_conversions/pcl_conversions.h>
+#include "sensor_msgs/PointCloud2.h"
+
 using namespace std;
 
 namespace omni_slam
@@ -27,6 +30,9 @@ ReconstructionEval::ReconstructionEval(const ::ros::NodeHandle &nh, const ::ros:
 void ReconstructionEval::InitPublishers()
 {
     TrackingEval::InitPublishers();
+    string outputTopic;
+    nhp_.param("point_cloud_topic", outputTopic, string("/omni_slam/reconstructed"));
+    pointCloudPublisher_ = nh_.advertise<sensor_msgs::PointCloud2>(outputTopic, 2);
 }
 
 void ReconstructionEval::ProcessFrame(unique_ptr<data::Frame> &&frame)
@@ -42,6 +48,13 @@ void ReconstructionEval::GetResultsData(std::map<std::string, std::vector<std::v
 
 void ReconstructionEval::Visualize(cv_bridge::CvImagePtr &base_img)
 {
+    pcl::PointCloud<pcl::PointXYZRGB> cloud;
+    reconstructionModule_->Visualize(base_img->image, cloud);
+    sensor_msgs::PointCloud2 msg;
+    pcl::toROSMsg(cloud, msg);
+    msg.header.frame_id = "map";
+    msg.header.stamp = ::ros::Time::now();
+    pointCloudPublisher_.publish(msg);
     TrackingEval::Visualize(base_img);
 }
 

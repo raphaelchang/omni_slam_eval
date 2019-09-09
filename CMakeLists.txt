@@ -15,6 +15,7 @@ set(REQ_CATKIN_PKGS
   cv_bridge
   sensor_msgs
   image_transport
+  pcl_ros
   tf2_ros
   rosbag
 )
@@ -27,6 +28,11 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 find_package(OpenCV 3.3 REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 link_directories(${OpenCV_LIBRARIES_DIRS})
+
+find_package(PCL 1.7 REQUIRED COMPONENTS common)
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
 
 find_package(HDF5 COMPONENTS C CXX HL REQUIRED)
 include_directories(${HDF5_INCLUDE_DIR})
@@ -88,6 +94,7 @@ target_link_libraries(omni_slam_tracking_eval_node PUBLIC omni_slam_eval_lib
   ${OpenCV_LIBS}
   ${HDF5_CXX_LIBRARIES}
   ${OpenMP_CXX_FLAGS}
+  ${PCL_LIBRARIES}
 )
 
 target_link_libraries(omni_slam_matching_eval_node PUBLIC omni_slam_eval_lib
@@ -95,6 +102,7 @@ target_link_libraries(omni_slam_matching_eval_node PUBLIC omni_slam_eval_lib
   ${OpenCV_LIBS}
   ${HDF5_CXX_LIBRARIES}
   ${OpenMP_CXX_FLAGS}
+  ${PCL_LIBRARIES}
 )
 
 target_link_libraries(omni_slam_reconstruction_eval_node PUBLIC omni_slam_eval_lib
@@ -102,6 +110,7 @@ target_link_libraries(omni_slam_reconstruction_eval_node PUBLIC omni_slam_eval_l
   ${OpenCV_LIBS}
   ${HDF5_CXX_LIBRARIES}
   ${OpenMP_CXX_FLAGS}
+  ${PCL_LIBRARIES}
 )
 
 target_compile_options(omni_slam_tracking_eval_node PUBLIC ${OpenMP_CXX_FLAGS})

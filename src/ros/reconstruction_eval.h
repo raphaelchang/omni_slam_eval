@@ -25,6 +25,8 @@ private:
     void GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data);
     void Visualize(cv_bridge::CvImagePtr &base_img);
 
+    ::ros::Publisher pointCloudPublisher_;
+
     std::unique_ptr<module::ReconstructionModule> reconstructionModule_;
 };
 

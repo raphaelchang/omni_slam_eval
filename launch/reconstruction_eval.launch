@@ -16,14 +16,14 @@
             camera_model: '$(arg camera_model)'
             camera_parameters: $(arg camera_params)
             detector_type: 'GFTT'
-            detector_parameters: {maxCorners: 100, qualityLevel: 0.01, minDistance: 5, blockSize: 5}
+            detector_parameters: {maxCorners: 5000, qualityLevel: 0.001, minDistance: 5, blockSize: 5}
             tracker_window_size: 128
             tracker_num_scales: 4
             tracker_delta_pixel_error_threshold: 3.0
             tracker_error_threshold: 20.0
             min_features_per_region: 10
             max_reprojection_error: 0.0
-            min_triangulation_angle: 5.0
+            min_triangulation_angle: 3.0
         </rosparam>
     </node>
 </launch>
