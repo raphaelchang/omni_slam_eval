@@ -7,13 +7,14 @@ namespace omni_slam
 namespace module
 {
 
-ReconstructionModule::ReconstructionModule(std::unique_ptr<reconstruction::Triangulator> &triangulator)
-    : triangulator_(std::move(triangulator))
+ReconstructionModule::ReconstructionModule(std::unique_ptr<reconstruction::Triangulator> &triangulator, std::unique_ptr<optimization::BundleAdjuster> &bundle_adjuster)
+    : triangulator_(std::move(triangulator)),
+    bundleAdjuster_(std::move(bundle_adjuster))
 {
 }
 
-ReconstructionModule::ReconstructionModule(std::unique_ptr<reconstruction::Triangulator> &&triangulator)
-    : ReconstructionModule(triangulator)
+ReconstructionModule::ReconstructionModule(std::unique_ptr<reconstruction::Triangulator> &&triangulator, std::unique_ptr<optimization::BundleAdjuster> &&bundle_adjuster)
+    : ReconstructionModule(triangulator, bundle_adjuster)
 {
 }
 
@@ -35,6 +36,19 @@ void ReconstructionModule::Update(std::vector<data::Landmark> &landmarks)
         visualization_.AddPoint(pt);
     }
     lastLandmarksSize_ = landmarks.size();
+}
+
+void ReconstructionModule::BundleAdjust(std::vector<data::Landmark> &landmarks)
+{
+    bundleAdjuster_->Optimize(landmarks);
+
+    for (int i = 0; i < landmarks.size(); i++)
+    {
+        if (landmarks[i].HasEstimatedPosition())
+        {
+            visualization_.UpdatePoint(i, landmarks[i].GetEstimatedPosition());
+        }
+    }
 }
 
 ReconstructionModule::Stats& ReconstructionModule::GetStats()

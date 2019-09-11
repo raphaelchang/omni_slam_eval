@@ -6,6 +6,7 @@
 #include <memory>
 
 #include "reconstruction/triangulator.h"
+#include "optimization/bundle_adjuster.h"
 #include "data/landmark.h"
 
 #include <pcl/common/projection_matrix.h>
@@ -25,10 +26,11 @@ public:
     {
     };
 
-    ReconstructionModule(std::unique_ptr<reconstruction::Triangulator> &triangulator);
-    ReconstructionModule(std::unique_ptr<reconstruction::Triangulator> &&triangulator);
+    ReconstructionModule(std::unique_ptr<reconstruction::Triangulator> &triangulator, std::unique_ptr<optimization::BundleAdjuster> &bundle_adjuster);
+    ReconstructionModule(std::unique_ptr<reconstruction::Triangulator> &&triangulator, std::unique_ptr<optimization::BundleAdjuster> &&bundle_adjuster);
 
     void Update(std::vector<data::Landmark> &landmarks);
+    void BundleAdjust(std::vector<data::Landmark> &landmarks);
 
     Stats& GetStats();
     void Visualize(cv::Mat &img, pcl::PointCloud<pcl::PointXYZRGB> &cloud);
@@ -50,6 +52,7 @@ private:
     };
 
     std::shared_ptr<reconstruction::Triangulator> triangulator_;
+    std::shared_ptr<optimization::BundleAdjuster> bundleAdjuster_;
 
     Stats stats_;
     Visualization visualization_;

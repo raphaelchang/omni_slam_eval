@@ -24,6 +24,8 @@
             min_features_per_region: 10
             max_reprojection_error: 0.0
             min_triangulation_angle: 3.0
+            bundle_adjustment_max_iterations: 1000
+            bundle_adjustment_logging: true
         </rosparam>
     </node>
 </launch>

@@ -27,11 +27,11 @@ EvalBase::EvalBase(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &nh_priv
 
     if (cameraModel == "double_sphere")
     {
-        cameraModel_.reset(new camera::DoubleSphere(cameraParams_["fx"], cameraParams_["fy"], cameraParams_["cx"], cameraParams_["cy"], cameraParams_["chi"], cameraParams_["alpha"]));
+        cameraModel_.reset(new camera::DoubleSphere<>(cameraParams_["fx"], cameraParams_["fy"], cameraParams_["cx"], cameraParams_["cy"], cameraParams_["chi"], cameraParams_["alpha"]));
     }
     else if (cameraModel == "perspective")
     {
-        cameraModel_.reset(new camera::Perspective(cameraParams_["fx"], cameraParams_["fy"], cameraParams_["cx"], cameraParams_["cy"]));
+        cameraModel_.reset(new camera::Perspective<>(cameraParams_["fx"], cameraParams_["fy"], cameraParams_["cx"], cameraParams_["cy"]));
     }
     else
     {
@@ -82,6 +82,10 @@ void EvalBase::FrameCallback(const sensor_msgs::ImageConstPtr &image, const sens
     frameNum_++;
 }
 
+void EvalBase::Finish()
+{
+}
+
 bool EvalBase::GetAttributes(std::map<std::string, std::string> &attributes)
 {
     return false;
@@ -130,10 +134,12 @@ void EvalBase::Run()
         geometry_msgs::PoseStamped::ConstPtr poseMsg = nullptr;
         int runNext = 0;
         int skip = 0;
+        int finished = true;
         for (rosbag::MessageInstance const m : rosbag::View(bag))
         {
             if (!::ros::ok())
             {
+                finished = false;
                 break;
             }
             if (m.getTopic() == depthImageTopic_)
@@ -163,6 +169,10 @@ void EvalBase::Run()
                     skip = 0;
                 }
             }
+        }
+        if (finished)
+        {
+            Finish();
         }
 
         ROS_INFO("Saving results...");

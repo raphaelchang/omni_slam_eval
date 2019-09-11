@@ -72,7 +72,7 @@ const Feature* Landmark::GetObservationByFrameID(const int frame_id) const
     return &obs_[idToIndex_.at(frame_id)];
 }
 
-void Landmark::SetEstimatedPosition(Vector3d pos)
+void Landmark::SetEstimatedPosition(const Vector3d &pos)
 {
     posEstimate_ = pos;
     hasPosEstimate_ = true;

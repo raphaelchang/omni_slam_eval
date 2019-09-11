@@ -22,6 +22,7 @@ private:
     void InitPublishers();
 
     void ProcessFrame(std::unique_ptr<data::Frame> &&frame);
+    void Finish();
     void GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data);
     void Visualize(cv_bridge::CvImagePtr &base_img);
 

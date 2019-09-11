@@ -8,21 +8,57 @@ namespace omni_slam
 namespace camera
 {
 
-class Perspective : public CameraModel
+template <typename T = double>
+class Perspective : public CameraModel<T>
 {
 public:
-    Perspective(const double fx, const double fy, const double cx, const double cy);
+    Perspective(const T fx, const T fy, const T cx, const T cy)
+        : CameraModel<T>("Perspective"),
+        fx_(fx),
+        fy_(fy),
+        cx_(cx),
+        cy_(cy)
+    {
+        cameraMat_ << fx_, 0., cx_, 0., fy_, cy_, 0., 0., 1.;
+    }
 
-    bool ProjectToImage(const Vector3d &bearing, Vector2d &pixel) const;
-    bool UnprojectToBearing(const Vector2d &pixel, Vector3d &bearing) const;
-    double GetFOV();
+    bool ProjectToImage(const Matrix<T, 3, 1> &bearing, Matrix<T, 2, 1> &pixel) const
+    {
+        const T &x = bearing(0);
+        const T &y = bearing(1);
+        const T &z = bearing(2);
+        //Matrix<T, 3, 1> pixel_h = cameraMat_ * bearing;
+        //pixel = pixel_h.hnormalized();
+        pixel(0) = x * fx_ / z + cx_;
+        pixel(1) = y * fy_ / z + cy_;
+        if (pixel(0) > 2. * cx_ || pixel(0) < 0. || pixel(1) > 2. * cy_ || pixel(1) < 0.)
+        {
+            return false;
+        }
+        return true;
+    }
+
+    bool UnprojectToBearing(const Matrix<T, 2, 1> &pixel, Matrix<T, 3, 1> &bearing) const
+    {
+        Matrix<T, 3, 1> pixel_h;
+        T mx = (pixel(0) - cx_) / fx_;
+        T my = (pixel(1) - cy_) / fy_;
+        pixel_h << mx, my, 1;
+        bearing = 1. / sqrt(mx * mx + my * my + 1.) * pixel_h;
+        return true;
+    }
+
+    T GetFOV()
+    {
+        return 2. * atan(cx_ / fx_);
+    }
 
 private:
-    double fx_;
-    double fy_;
-    double cx_;
-    double cy_;
-    Matrix3d cameraMat_;
+    T fx_;
+    T fy_;
+    T cx_;
+    T cy_;
+    Matrix<T, 3, 3> cameraMat_;
 };
 
 }

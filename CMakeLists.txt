@@ -34,6 +34,9 @@ include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
+find_package(Ceres REQUIRED)
+include_directories(${Ceres_INCLUDE_DIRS})
+
 find_package(HDF5 COMPONENTS C CXX HL REQUIRED)
 include_directories(${HDF5_INCLUDE_DIR})
 link_directories(${HDF5_LIBRARY_DIRS})
@@ -59,14 +62,11 @@ add_library(omni_slam_eval_lib
   src/data/frame.cc
   src/data/feature.cc
   src/data/landmark.cc
-  src/camera/perspective.cc
-  src/camera/double_sphere.cc
   src/feature/tracker.cc
   src/feature/detector.cc
   src/feature/matcher.cc
   src/reconstruction/triangulator.cc
-  src/util/tf_util.cc
-  src/util/math_util.cc
+  src/optimization/bundle_adjuster.cc
   src/util/hdf_file.cc
 )
 
@@ -95,6 +95,7 @@ target_link_libraries(omni_slam_tracking_eval_node PUBLIC omni_slam_eval_lib
   ${HDF5_CXX_LIBRARIES}
   ${OpenMP_CXX_FLAGS}
   ${PCL_LIBRARIES}
+  ceres
 )
 
 target_link_libraries(omni_slam_matching_eval_node PUBLIC omni_slam_eval_lib
@@ -103,6 +104,7 @@ target_link_libraries(omni_slam_matching_eval_node PUBLIC omni_slam_eval_lib
   ${HDF5_CXX_LIBRARIES}
   ${OpenMP_CXX_FLAGS}
   ${PCL_LIBRARIES}
+  ceres
 )
 
 target_link_libraries(omni_slam_reconstruction_eval_node PUBLIC omni_slam_eval_lib
@@ -111,6 +113,7 @@ target_link_libraries(omni_slam_reconstruction_eval_node PUBLIC omni_slam_eval_l
   ${HDF5_CXX_LIBRARIES}
   ${OpenMP_CXX_FLAGS}
   ${PCL_LIBRARIES}
+  ceres
 )
 
 target_compile_options(omni_slam_tracking_eval_node PUBLIC ${OpenMP_CXX_FLAGS})

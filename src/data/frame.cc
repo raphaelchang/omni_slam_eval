@@ -6,7 +6,7 @@ namespace omni_slam
 namespace data
 {
 
-Frame::Frame(const int id, cv::Mat &image, cv::Mat &depth_image, Matrix<double, 3, 4>  &pose, double time, camera::CameraModel &camera_model)
+Frame::Frame(const int id, cv::Mat &image, cv::Mat &depth_image, Matrix<double, 3, 4>  &pose, double time, camera::CameraModel<> &camera_model)
     : id_(id),
     image_(image.clone()),
     depthImage_(depth_image.clone()),
@@ -19,7 +19,7 @@ Frame::Frame(const int id, cv::Mat &image, cv::Mat &depth_image, Matrix<double, 
     hasDepth_ = true;
 }
 
-Frame::Frame(const int id, cv::Mat &image, cv::Mat &depth_image, double time, camera::CameraModel &camera_model)
+Frame::Frame(const int id, cv::Mat &image, cv::Mat &depth_image, double time, camera::CameraModel<> &camera_model)
     : id_(id),
     image_(image.clone()),
     depthImage_(depth_image.clone()),
@@ -30,7 +30,7 @@ Frame::Frame(const int id, cv::Mat &image, cv::Mat &depth_image, double time, ca
     hasDepth_ = true;
 }
 
-Frame::Frame(const int id, cv::Mat &image, Matrix<double, 3, 4>  &pose, double time, camera::CameraModel &camera_model)
+Frame::Frame(const int id, cv::Mat &image, Matrix<double, 3, 4>  &pose, double time, camera::CameraModel<> &camera_model)
     : id_(id),
     image_(image.clone()),
     pose_(pose),
@@ -42,7 +42,7 @@ Frame::Frame(const int id, cv::Mat &image, Matrix<double, 3, 4>  &pose, double t
     hasDepth_ = false;
 }
 
-Frame::Frame(const int id, cv::Mat &image, double time, camera::CameraModel &camera_model)
+Frame::Frame(const int id, cv::Mat &image, double time, camera::CameraModel<> &camera_model)
     : id_(id),
     timeSec_(time),
     cameraModel_(camera_model)
@@ -100,7 +100,7 @@ const int Frame::GetID() const
     return id_;
 }
 
-const camera::CameraModel& Frame::GetCameraModel() const
+const camera::CameraModel<>& Frame::GetCameraModel() const
 {
     return cameraModel_;
 }
@@ -136,10 +136,17 @@ void Frame::SetDepthImage(cv::Mat &depth_image)
     hasDepth_ = true;
 }
 
-void Frame::SetEstimatedPose(Matrix<double, 3, 4> &pose)
+void Frame::SetEstimatedPose(const Matrix<double, 3, 4> &pose)
 {
     poseEstimate_ = pose;
     invPoseEstimate_ = util::TFUtil::InversePoseMatrix(pose);
+    hasPoseEstimate_ = true;
+}
+
+void Frame::SetEstimatedInversePose(const Matrix<double, 3, 4> &pose)
+{
+    invPoseEstimate_ = pose;
+    poseEstimate_ = util::TFUtil::InversePoseMatrix(pose);
     hasPoseEstimate_ = true;
 }
 

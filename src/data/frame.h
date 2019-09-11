@@ -15,17 +15,17 @@ namespace data
 class Frame
 {
 public:
-    Frame(const int id, cv::Mat &image, cv::Mat &depth_image, Matrix<double, 3, 4>  &pose, double time, camera::CameraModel &camera_model);
-    Frame(const int id, cv::Mat &image, cv::Mat &depth_image, double time, camera::CameraModel &camera_model);
-    Frame(const int id, cv::Mat &image, Matrix<double, 3, 4>  &pose, double time, camera::CameraModel &camera_model);
-    Frame(const int id, cv::Mat &image, double time, camera::CameraModel &camera_model);
+    Frame(const int id, cv::Mat &image, cv::Mat &depth_image, Matrix<double, 3, 4>  &pose, double time, camera::CameraModel<> &camera_model);
+    Frame(const int id, cv::Mat &image, cv::Mat &depth_image, double time, camera::CameraModel<> &camera_model);
+    Frame(const int id, cv::Mat &image, Matrix<double, 3, 4>  &pose, double time, camera::CameraModel<> &camera_model);
+    Frame(const int id, cv::Mat &image, double time, camera::CameraModel<> &camera_model);
     Frame(const Frame &other);
 
     const Matrix<double, 3, 4>& GetPose() const;
     const Matrix<double, 3, 4>& GetInversePose() const;
     const cv::Mat& GetImage();
     const cv::Mat& GetDepthImage();
-    const camera::CameraModel& GetCameraModel() const;
+    const camera::CameraModel<>& GetCameraModel() const;
     const Matrix<double, 3, 4>& GetEstimatedPose() const;
     const Matrix<double, 3, 4>& GetEstimatedInversePose() const;
     const int GetID() const;
@@ -36,7 +36,8 @@ public:
 
     void SetPose(Matrix<double, 3, 4> &pose);
     void SetDepthImage(cv::Mat &depth_image);
-    void SetEstimatedPose(Matrix<double, 3, 4> &pose);
+    void SetEstimatedPose(const Matrix<double, 3, 4> &pose);
+    void SetEstimatedInversePose(const Matrix<double, 3, 4> &pose);
 
     void CompressImages();
     void DecompressImages();
@@ -53,7 +54,7 @@ private:
     Matrix<double, 3, 4> poseEstimate_;
     Matrix<double, 3, 4> invPoseEstimate_;
     double timeSec_;
-    camera::CameraModel &cameraModel_;
+    camera::CameraModel<> &cameraModel_;
 
     bool hasPose_;
     bool hasDepth_;
