@@ -43,8 +43,9 @@ void ReconstructionEval::InitPublishers()
 
 void ReconstructionEval::ProcessFrame(unique_ptr<data::Frame> &&frame)
 {
-    TrackingEval::ProcessFrame(std::move(frame));
+    trackingModule_->Update(frame);
     reconstructionModule_->Update(trackingModule_->GetLandmarks());
+    trackingModule_->Redetect();
 }
 
 void ReconstructionEval::Finish()

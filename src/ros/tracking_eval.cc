@@ -56,6 +56,7 @@ void TrackingEval::InitPublishers()
 void TrackingEval::ProcessFrame(unique_ptr<data::Frame> &&frame)
 {
     trackingModule_->Update(frame);
+    trackingModule_->Redetect();
 }
 
 void TrackingEval::GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data)

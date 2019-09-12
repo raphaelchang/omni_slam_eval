@@ -23,17 +23,17 @@ void ReconstructionModule::Update(std::vector<data::Landmark> &landmarks)
     triangulator_->Triangulate(landmarks);
 
     visualization_.Reserve(landmarks.size());
-    for (int i = 0; i < lastLandmarksSize_; i++)
+    for (int i = lastLandmarksSize_; i < landmarks.size(); i++)
+    {
+        cv::Point2f pt = landmarks[i].GetObservations()[0].GetKeypoint().pt;
+        visualization_.AddPoint(pt);
+    }
+    for (int i = 0; i < landmarks.size(); i++)
     {
         if (landmarks[i].HasEstimatedPosition())
         {
             visualization_.UpdatePoint(i, landmarks[i].GetEstimatedPosition());
         }
-    }
-    for (int i = lastLandmarksSize_; i < landmarks.size(); i++)
-    {
-        cv::Point2f pt = landmarks[i].GetObservations()[0].GetKeypoint().pt;
-        visualization_.AddPoint(pt);
     }
     lastLandmarksSize_ = landmarks.size();
 }

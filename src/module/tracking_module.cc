@@ -51,7 +51,7 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
 
     int i = 0;
     int numGood = 0;
-    map<pair<int, int>, int> regionCount;
+    regionCount_.clear();
     stats_.trackLengths.resize(landmarks_.size(), 0);
     for (data::Landmark& landmark : landmarks_)
     {
@@ -66,7 +66,7 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
             vector<double>::const_iterator ti = upper_bound(ts_.begin(), ts_.end(), t);
             int rinx = min((int)(ri - rs_.begin()), (int)(rs_.size() - 1)) - 1;
             int tinx = min((int)(ti - ts_.begin()), (int)(ts_.size() - 1)) - 1;
-            regionCount[{rinx, tinx}]++;
+            regionCount_[{rinx, tinx}]++;
 
             Vector2d pixelGnd;
             if (frames_.back()->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(frames_.back()->GetInversePose(), landmark.GetGroundTruth())), pixelGnd))
@@ -106,23 +106,28 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
         }
         i++;
     }
-    #pragma omp parallel for collapse(2)
-    for (int i = 0; i < rs_.size() - 1; i++)
-    {
-        for (int j = 0; j < ts_.size() - 1; j++)
-        {
-            if (regionCount.find({i, j}) == regionCount.end() || regionCount.at({i, j}) < minFeaturesRegion_)
-            {
-                detector_->DetectInRadialRegion(*frames_.back(), landmarks_, rs_[i] * imsize, rs_[i+1] * imsize, ts_[j], ts_[j+1]);
-            }
-        }
-    }
 
     stats_.frameTrackCounts.emplace_back(vector<int>{frameNum_, numGood});
 
     (*next(frames_.rbegin()))->CompressImages();
 
     frameNum_++;
+}
+
+void TrackingModule::Redetect()
+{
+    int imsize = max(frames_.back()->GetImage().rows, frames_.back()->GetImage().cols);
+    #pragma omp parallel for collapse(2)
+    for (int i = 0; i < rs_.size() - 1; i++)
+    {
+        for (int j = 0; j < ts_.size() - 1; j++)
+        {
+            if (regionCount_.find({i, j}) == regionCount_.end() || regionCount_.at({i, j}) < minFeaturesRegion_)
+            {
+                detector_->DetectInRadialRegion(*frames_.back(), landmarks_, rs_[i] * imsize, rs_[i+1] * imsize, ts_[j], ts_[j+1]);
+            }
+        }
+    }
 }
 
 std::vector<data::Landmark>& TrackingModule::GetLandmarks()

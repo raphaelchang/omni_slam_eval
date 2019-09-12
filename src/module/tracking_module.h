@@ -31,6 +31,7 @@ public:
     TrackingModule(std::unique_ptr<feature::Detector> &&detector, std::unique_ptr<feature::Tracker> &&tracker, int minFeaturesRegion = 5);
 
     void Update(std::unique_ptr<data::Frame> &frame);
+    void Redetect();
 
     std::vector<data::Landmark>& GetLandmarks();
 
@@ -62,6 +63,7 @@ private:
     const std::vector<double> rs_{0, 0.1, 0.2, 0.3, 0.4, 0.49};
     const std::vector<double> ts_{-M_PI, -3 * M_PI / 4, -M_PI / 2, -M_PI / 4, 0, M_PI / 4, M_PI / 2, 3 * M_PI / 4, M_PI};
     int minFeaturesRegion_;
+    std::map<std::pair<int, int>, int> regionCount_;
 
     Stats stats_;
     Visualization visualization_;
