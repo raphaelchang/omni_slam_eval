@@ -66,6 +66,7 @@ add_library(omni_slam_eval_lib
   src/feature/detector.cc
   src/feature/matcher.cc
   src/reconstruction/triangulator.cc
+  src/odometry/pnp.cc
   src/optimization/bundle_adjuster.cc
   src/util/hdf_file.cc
 )
@@ -95,7 +96,7 @@ target_link_libraries(omni_slam_tracking_eval_node PUBLIC omni_slam_eval_lib
   ${HDF5_CXX_LIBRARIES}
   ${OpenMP_CXX_FLAGS}
   ${PCL_LIBRARIES}
-  ceres
+  ${CERES_LIBRARIES}
 )
 
 target_link_libraries(omni_slam_matching_eval_node PUBLIC omni_slam_eval_lib
@@ -104,7 +105,7 @@ target_link_libraries(omni_slam_matching_eval_node PUBLIC omni_slam_eval_lib
   ${HDF5_CXX_LIBRARIES}
   ${OpenMP_CXX_FLAGS}
   ${PCL_LIBRARIES}
-  ceres
+  ${CERES_LIBRARIES}
 )
 
 target_link_libraries(omni_slam_reconstruction_eval_node PUBLIC omni_slam_eval_lib
@@ -113,7 +114,7 @@ target_link_libraries(omni_slam_reconstruction_eval_node PUBLIC omni_slam_eval_l
   ${HDF5_CXX_LIBRARIES}
   ${OpenMP_CXX_FLAGS}
   ${PCL_LIBRARIES}
-  ceres
+  ${CERES_LIBRARIES}
 )
 
 target_compile_options(omni_slam_tracking_eval_node PUBLIC ${OpenMP_CXX_FLAGS})
