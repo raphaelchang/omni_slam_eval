@@ -62,9 +62,32 @@ Vector3d Feature::GetWorldPoint()
     return worldPoint_;
 }
 
+Vector3d Feature::GetEstimatedWorldPoint()
+{
+    if (worldPointEstimateCached_)
+    {
+        return worldPointEstimate_;
+    }
+    Vector3d worldFramePt = GetBearing();
+    bool wasCompressed = frame_.IsCompressed();
+    worldFramePt *= frame_.GetDepthImage().at<double>((int)(kpt_.pt.y + 0.5), (int)(kpt_.pt.x + 0.5));
+    if (wasCompressed)
+    {
+        frame_.CompressImages();
+    }
+    worldPointEstimate_ = util::TFUtil::TransformPoint(frame_.GetEstimatedPose(), worldFramePt);
+    worldPointEstimateCached_ = true;
+    return worldPointEstimate_;
+}
+
 bool Feature::HasWorldPoint() const
 {
     return frame_.HasPose() && frame_.HasDepthImage();
+}
+
+bool Feature::HasEstimatedWorldPoint() const
+{
+    return frame_.HasEstimatedPose() && frame_.HasDepthImage();
 }
 
 }

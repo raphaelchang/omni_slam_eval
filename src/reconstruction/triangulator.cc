@@ -41,15 +41,15 @@ bool Triangulator::TriangulateNViews(const std::vector<data::Feature> &views, Ve
     {
         Matrix<double, 3, 4> pose;
         Matrix<double, 3, 4> invpose;
-        if (view.GetFrame().HasPose())
-        {
-            pose = view.GetFrame().GetInversePose();
-            invpose = view.GetFrame().GetPose();
-        }
-        else if (view.GetFrame().HasEstimatedPose())
+        if (view.GetFrame().HasEstimatedPose())
         {
             pose = view.GetFrame().GetEstimatedInversePose();
             invpose = view.GetFrame().GetEstimatedPose();
+        }
+        else if (view.GetFrame().HasPose())
+        {
+            pose = view.GetFrame().GetInversePose();
+            invpose = view.GetFrame().GetPose();
         }
         else
         {
@@ -74,13 +74,13 @@ bool Triangulator::CheckReprojectionErrors(const std::vector<data::Feature> &vie
     for (const data::Feature &view : views)
     {
         Matrix<double, 3, 4> pose;
-        if (view.GetFrame().HasPose())
-        {
-            pose = view.GetFrame().GetInversePose();
-        }
-        else if (view.GetFrame().HasEstimatedPose())
+        if (view.GetFrame().HasEstimatedPose())
         {
             pose = view.GetFrame().GetEstimatedInversePose();
+        }
+        else if (view.GetFrame().HasPose())
+        {
+            pose = view.GetFrame().GetInversePose();
         }
         else
         {

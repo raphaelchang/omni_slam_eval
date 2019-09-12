@@ -18,6 +18,12 @@ void Landmark::AddObservation(Feature obs, bool compute_gnd)
             groundTruth_ = obs.GetWorldPoint();
             hasGroundTruth_ = true;
         }
+        if (obs.HasEstimatedWorldPoint())
+        {
+            posEstimate_ = obs.GetEstimatedWorldPoint();
+            obsForEst_.push_back(obs);
+            hasPosEstimate_ = true;
+        }
     }
     if (idToIndex_.find(obs.GetFrame().GetID()) != idToIndex_.end())
     {

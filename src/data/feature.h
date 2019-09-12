@@ -24,14 +24,18 @@ public:
 
     Vector3d GetBearing() const;
     Vector3d GetWorldPoint();
+    Vector3d GetEstimatedWorldPoint();
     bool HasWorldPoint() const;
+    bool HasEstimatedWorldPoint() const;
 
     bool worldPointCached_{false};
+    bool worldPointEstimateCached_{false};
 private:
     Frame &frame_;
     cv::KeyPoint kpt_;
     cv::Mat descriptor_;
     Vector3d worldPoint_;
+    Vector3d worldPointEstimate_;
 };
 
 }
