@@ -2,6 +2,9 @@
 
 #include "reprojection_error.h"
 
+#include "camera/double_sphere.h"
+#include "camera/perspective.h"
+
 namespace omni_slam
 {
 namespace optimization
@@ -11,23 +14,16 @@ BundleAdjuster::BundleAdjuster(int max_iterations, bool log)
 {
     problem_.reset(new ceres::Problem());
     solverOptions_.max_num_iterations = max_iterations;
-    solverOptions_.linear_solver_type = ceres::DENSE_SCHUR;
+    solverOptions_.linear_solver_type = ceres::ITERATIVE_SCHUR;
+    solverOptions_.preconditioner_type = ceres::SCHUR_JACOBI;
     solverOptions_.minimizer_progress_to_stdout = log;
     solverOptions_.logging_type = log ? ceres::PER_MINIMIZER_ITERATION : ceres::SILENT;
-    //solverOptions_.check_gradients = true;
 }
 
 bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
 {
-    int numLandmarks = 0;
-    for (const data::Landmark &landmark : landmarks)
-    {
-        if (landmark.HasEstimatedPosition() || landmark.HasGroundTruth())
-        {
-            numLandmarks++;
-        }
-    }
-    std::vector<double> landmarkEstimates(3 * numLandmarks, 0);
+    std::vector<double> landmarkEstimates;
+    landmarkEstimates.reserve(3 * landmarks.size());
     std::map<int, std::vector<double>> framePoses;
     std::map<int, data::Frame*> estFrames;
     ceres::LossFunction *loss_function = new ceres::HuberLoss(1.0);
@@ -62,7 +58,8 @@ bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
         {
             continue;
         }
-        for (const data::Feature &feature : landmark.GetObservations())
+        const std::vector<data::Feature> obs = landmark.HasEstimatedPosition() ? landmark.GetObservationsForEstimate() : landmark.GetObservations();
+        for (const data::Feature &feature : obs)
         {
             if (!feature.GetFrame().HasEstimatedPose() && feature.GetFrame().HasPose())
             {
@@ -72,7 +69,7 @@ bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
                 }
                 if (framePoses.find(feature.GetFrame().GetID()) == framePoses.end())
                 {
-                    framePoses[feature.GetFrame().GetID()].insert(framePoses[feature.GetFrame().GetID()].end(), feature.GetFrame().GetInversePose().data(), feature.GetFrame().GetInversePose().data() + 12);
+                    framePoses[feature.GetFrame().GetID()] = std::vector<double>(feature.GetFrame().GetInversePose().data(), feature.GetFrame().GetInversePose().data() + 12);
                     problem_->AddParameterBlock(&framePoses[feature.GetFrame().GetID()][0], 12);
                     problem_->SetParameterBlockConstant(&framePoses[feature.GetFrame().GetID()][0]);
                 }
@@ -81,7 +78,7 @@ bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
             {
                 if (framePoses.find(feature.GetFrame().GetID()) == framePoses.end())
                 {
-                    framePoses[feature.GetFrame().GetID()].insert(framePoses[feature.GetFrame().GetID()].end(), feature.GetFrame().GetEstimatedInversePose().data(), feature.GetFrame().GetEstimatedInversePose().data() + 12);
+                    framePoses[feature.GetFrame().GetID()] = std::vector<double>(feature.GetFrame().GetInversePose().data(), feature.GetFrame().GetInversePose().data() + 12);
                     problem_->AddParameterBlock(&framePoses[feature.GetFrame().GetID()][0], 12);
                     estFrames[feature.GetFrame().GetID()] = const_cast<data::Frame*>(&feature.GetFrame());
                 }
@@ -90,8 +87,19 @@ bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
             {
                 continue;
             }
-            ceres::CostFunction *cost_function = ReprojectionError::Create(feature);
-            problem_->AddResidualBlock(cost_function, loss_function, &framePoses[feature.GetFrame().GetID()][0], &landmarkEstimates[landmarkEstimates.size() - 3]);
+            ceres::CostFunction *cost_function = nullptr;
+            if (feature.GetFrame().GetCameraModel().GetType() == camera::CameraModel<>::kPerspective)
+            {
+                cost_function = ReprojectionError<camera::Perspective>::Create(feature);
+            }
+            else if (feature.GetFrame().GetCameraModel().GetType() == camera::CameraModel<>::kDoubleSphere)
+            {
+                cost_function = ReprojectionError<camera::DoubleSphere>::Create(feature);
+            }
+            if (cost_function != nullptr)
+            {
+                problem_->AddResidualBlock(cost_function, loss_function, &framePoses[feature.GetFrame().GetID()][0], &landmarkEstimates[landmarkEstimates.size() - 3]);
+            }
         }
     }
 

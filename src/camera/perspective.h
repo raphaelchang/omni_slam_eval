@@ -11,6 +11,8 @@ namespace camera
 template <typename T = double>
 class Perspective : public CameraModel<T>
 {
+    template <typename> friend class Perspective;
+
 public:
     Perspective(const T fx, const T fy, const T cx, const T cy)
         : CameraModel<T>("Perspective"),
@@ -20,6 +22,12 @@ public:
         cy_(cy)
     {
         cameraMat_ << fx_, 0., cx_, 0., fy_, cy_, 0., 0., 1.;
+    }
+
+    template <typename U>
+    Perspective(const CameraModel<U> &other)
+        : Perspective(T(static_cast<const Perspective<U>&>(other).fx_), T(static_cast<const Perspective<U>&>(other).fy_), T(static_cast<const Perspective<U>&>(other).cx_), T(static_cast<const Perspective<U>&>(other).cy_))
+    {
     }
 
     bool ProjectToImage(const Matrix<T, 3, 1> &bearing, Matrix<T, 2, 1> &pixel) const
@@ -48,9 +56,14 @@ public:
         return true;
     }
 
-    T GetFOV()
+    T GetFOV() const
     {
         return 2. * atan(cx_ / fx_);
+    }
+
+    typename CameraModel<T>::Type GetType() const
+    {
+        return CameraModel<T>::kPerspective;
     }
 
 private:

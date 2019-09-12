@@ -19,6 +19,7 @@ public:
     void AddObservation(Feature obs, bool compute_gnd = true);
     const std::vector<Feature>& GetObservations() const;
     std::vector<Feature>& GetObservations();
+    const std::vector<Feature>& GetObservationsForEstimate() const;
     bool IsObservedInFrame(const int frame_id) const;
     const int GetFirstFrameID() const;
     const int GetNumObservations() const;
@@ -32,6 +33,7 @@ public:
 
 private:
     std::vector<Feature> obs_;
+    std::vector<Feature> obsForEst_;
     std::map<int, int> idToIndex_;
     Vector3d groundTruth_;
     Vector3d posEstimate_;

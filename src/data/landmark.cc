@@ -32,6 +32,11 @@ const std::vector<Feature>& Landmark::GetObservations() const
     return obs_;
 }
 
+const std::vector<Feature>& Landmark::GetObservationsForEstimate() const
+{
+    return obsForEst_;
+}
+
 std::vector<Feature>& Landmark::GetObservations()
 {
     return obs_;
@@ -75,6 +80,12 @@ const Feature* Landmark::GetObservationByFrameID(const int frame_id) const
 void Landmark::SetEstimatedPosition(const Vector3d &pos)
 {
     posEstimate_ = pos;
+    obsForEst_.clear();
+    obsForEst_.reserve(obs_.size());
+    for (data::Feature &feat : obs_)
+    {
+        obsForEst_.push_back(feat);
+    }
     hasPosEstimate_ = true;
 }
 
