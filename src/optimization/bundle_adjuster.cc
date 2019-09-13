@@ -24,7 +24,7 @@ bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
 {
     std::vector<double> landmarkEstimates;
     landmarkEstimates.reserve(3 * landmarks.size());
-    std::map<int, std::vector<double>> framePoses;
+    std::map<int, std::pair<std::vector<double>, std::vector<double>>> framePoses;
     std::map<int, data::Frame*> estFrames;
     ceres::LossFunction *loss_function = new ceres::HuberLoss(1.0);
     for (const data::Landmark &landmark : landmarks)
@@ -69,17 +69,29 @@ bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
                 }
                 if (framePoses.find(feature.GetFrame().GetID()) == framePoses.end())
                 {
-                    framePoses[feature.GetFrame().GetID()] = std::vector<double>(feature.GetFrame().GetInversePose().data(), feature.GetFrame().GetInversePose().data() + 12);
-                    problem_->AddParameterBlock(&framePoses[feature.GetFrame().GetID()][0], 12);
-                    problem_->SetParameterBlockConstant(&framePoses[feature.GetFrame().GetID()][0]);
+                    const Matrix<double, 3, 4> &pose = feature.GetFrame().GetInversePose();
+                    Quaterniond quat(pose.block<3, 3>(0, 0));
+                    quat.normalize();
+                    const Vector3d &t = pose.block<3, 1>(0, 3);
+                    framePoses[feature.GetFrame().GetID()] = {std::vector<double>(quat.coeffs().data(), quat.coeffs().data() + 4), std::vector<double>(t.data(), t.data() + 3)};
+                    problem_->AddParameterBlock(&framePoses[feature.GetFrame().GetID()].first[0], 4);
+                    problem_->AddParameterBlock(&framePoses[feature.GetFrame().GetID()].second[0], 3);
+                    problem_->SetParameterBlockConstant(&framePoses[feature.GetFrame().GetID()].first[0]);
+                    problem_->SetParameterBlockConstant(&framePoses[feature.GetFrame().GetID()].second[0]);
                 }
             }
             else if (feature.GetFrame().HasEstimatedPose())
             {
                 if (framePoses.find(feature.GetFrame().GetID()) == framePoses.end())
                 {
-                    framePoses[feature.GetFrame().GetID()] = std::vector<double>(feature.GetFrame().GetInversePose().data(), feature.GetFrame().GetInversePose().data() + 12);
-                    problem_->AddParameterBlock(&framePoses[feature.GetFrame().GetID()][0], 12);
+                    const Matrix<double, 3, 4> &pose = feature.GetFrame().GetInversePose();
+                    Quaterniond quat(pose.block<3, 3>(0, 0));
+                    quat.normalize();
+                    const Vector3d &t = pose.block<3, 1>(0, 3);
+                    framePoses[feature.GetFrame().GetID()] = {std::vector<double>(quat.coeffs().data(), quat.coeffs().data() + 4), std::vector<double>(t.data(), t.data() + 3)};
+                    problem_->AddParameterBlock(&framePoses[feature.GetFrame().GetID()].first[0], 4);
+                    problem_->AddParameterBlock(&framePoses[feature.GetFrame().GetID()].second[0], 3);
+                    problem_->SetParameterization(&framePoses[feature.GetFrame().GetID()].first[0], new ceres::EigenQuaternionParameterization());
                     estFrames[feature.GetFrame().GetID()] = const_cast<data::Frame*>(&feature.GetFrame());
                 }
             }
@@ -98,11 +110,15 @@ bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
             }
             if (cost_function != nullptr)
             {
-                problem_->AddResidualBlock(cost_function, loss_function, &framePoses[feature.GetFrame().GetID()][0], &landmarkEstimates[landmarkEstimates.size() - 3]);
+                problem_->AddResidualBlock(cost_function, loss_function, &framePoses[feature.GetFrame().GetID()].first[0], &framePoses[feature.GetFrame().GetID()].second[0], &landmarkEstimates[landmarkEstimates.size() - 3]);
             }
         }
     }
 
+    if (solverOptions_.minimizer_progress_to_stdout)
+    {
+        std::cout << "Running bundle adjustment..." << std::endl;
+    }
     ceres::Solver::Summary summary;
     ceres::Solve(solverOptions_, problem_.get(), &summary);
     if (solverOptions_.minimizer_progress_to_stdout)
@@ -139,7 +155,9 @@ bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
     }
     for (auto &frame : estFrames)
     {
-        const Matrix<double, 3, 4> pose = Map<const Matrix<double, 3, 4>>(&framePoses[frame.first][0]);
+        const Quaterniond quat = Map<const Quaterniond>(&framePoses[frame.first].first[0]);
+        const Vector3d t = Map<const Vector3d>(&framePoses[frame.first].second[0]);
+        const Matrix<double, 3, 4> pose = util::TFUtil::QuaternionTranslationToPoseMatrix(quat, t);
         frame.second->SetEstimatedInversePose(pose);
     }
     return true;

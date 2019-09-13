@@ -6,6 +6,7 @@
 #include <memory>
 
 #include "odometry/pnp.h"
+#include "optimization/bundle_adjuster.h"
 #include "data/landmark.h"
 
 #include <pcl/common/projection_matrix.h>
@@ -25,15 +26,17 @@ public:
     {
     };
 
-    OdometryModule(std::unique_ptr<odometry::PNP> &pnp);
-    OdometryModule(std::unique_ptr<odometry::PNP> &&pnp);
+    OdometryModule(std::unique_ptr<odometry::PNP> &pnp, std::unique_ptr<optimization::BundleAdjuster> &bundle_adjuster);
+    OdometryModule(std::unique_ptr<odometry::PNP> &&pnp, std::unique_ptr<optimization::BundleAdjuster> &&bundle_adjuster);
 
     void Update(std::vector<data::Landmark> &landmarks, data::Frame &frame);
+    void BundleAdjust(std::vector<data::Landmark> &landmarks);
 
     Stats& GetStats();
 
 private:
     std::shared_ptr<odometry::PNP> pnp_;
+    std::shared_ptr<optimization::BundleAdjuster> bundleAdjuster_;
 
     Stats stats_;
 };

@@ -22,8 +22,9 @@ public:
 
 private:
     int RANSAC(const std::vector<Vector3d> &xs, const std::vector<Vector3d> &ys, const std::vector<Vector2d> &yns, const camera::CameraModel<> &camera_model, Matrix<double, 3, 4> &pose) const;
+    bool Refine(const std::vector<Vector3d> &xs, const std::vector<const data::Feature*> &features, const std::vector<int> indices, Matrix<double, 3, 4> &pose) const;
     double P4P(const std::vector<Vector3d> &xs, const std::vector<Vector3d> &ys, const std::vector<Vector2d> &yns, std::vector<int> indices, const camera::CameraModel<> &camera_model, Matrix<double, 3, 4> &pose) const;
-    int CountInliers(const std::vector<Vector3d> &xs, const std::vector<Vector2d> &yns, const Matrix<double, 3, 4> &pose, const camera::CameraModel<> &camera_model) const;
+    std::vector<int> GetInlierIndices(const std::vector<Vector3d> &xs, const std::vector<Vector2d> &yns, const Matrix<double, 3, 4> &pose, const camera::CameraModel<> &camera_model) const;
 
     int ransacIterations_;
     double reprojThreshold_;

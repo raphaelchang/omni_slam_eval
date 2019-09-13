@@ -1,6 +1,11 @@
 #include "pnp.h"
 #include "lambda_twist.h"
 
+#include <ceres/ceres.h>
+#include "optimization/reprojection_error.h"
+#include "camera/double_sphere.h"
+#include "camera/perspective.h"
+
 #include "util/tf_util.h"
 
 #include <random>
@@ -22,6 +27,7 @@ int PNP::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &fram
     std::vector<Vector3d> xs;
     std::vector<Vector2d> yns;
     std::vector<Vector3d> ys;
+    std::vector<const data::Feature*> features;
     for (const data::Landmark &landmark : landmarks)
     {
         if (landmark.IsObservedInFrame(frame.GetID()))
@@ -43,10 +49,16 @@ int PNP::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &fram
             pix << feat->GetKeypoint().pt.x, feat->GetKeypoint().pt.y;
             yns.push_back(pix);
             ys.push_back(feat->GetBearing());
+            features.push_back(feat);
         }
     }
     Matrix<double, 3, 4> pose;
     int inliers = RANSAC(xs, ys, yns, frame.GetCameraModel(), pose);
+    std::vector<int> indices = GetInlierIndices(xs, yns, pose, frame.GetCameraModel());
+    if (inliers > 3)
+    {
+        Refine(xs, features, indices, pose);
+    }
     frame.SetEstimatedInversePose(pose);
     return inliers;
 }
@@ -74,7 +86,7 @@ int PNP::RANSAC(const std::vector<Vector3d> &xs, const std::vector<Vector3d> &ys
             continue;
         }
 
-        int inliers = CountInliers(xs, yns, iterPose, camera_model);
+        int inliers = GetInlierIndices(xs, yns, iterPose, camera_model).size();
         if (inliers > maxInliers)
         {
             maxInliers = inliers;
@@ -82,6 +94,55 @@ int PNP::RANSAC(const std::vector<Vector3d> &xs, const std::vector<Vector3d> &ys
         }
     }
     return maxInliers;
+}
+
+bool PNP::Refine(const std::vector<Vector3d> &xs, const std::vector<const data::Feature*> &features, const std::vector<int> indices, Matrix<double, 3, 4> &pose) const
+{
+    ceres::Problem problem;
+    ceres::LossFunction *loss_function = nullptr;
+    std::vector<double> landmarks;
+    landmarks.reserve(3 * indices.size());
+    Quaterniond quat(pose.block<3, 3>(0, 0));
+    quat.normalize();
+    Vector3d t(pose.block<3, 1>(0, 3));
+    std::vector<double> quatData(quat.coeffs().data(), quat.coeffs().data() + 4);
+    std::vector<double> tData(t.data(), t.data() + 3);
+    for (int i : indices)
+    {
+        const Vector3d &x = xs[i];
+        landmarks.push_back(x(0));
+        landmarks.push_back(x(1));
+        landmarks.push_back(x(2));
+        ceres::CostFunction *cost_function = nullptr;
+        if (features[i]->GetFrame().GetCameraModel().GetType() == camera::CameraModel<>::kPerspective)
+        {
+            cost_function = optimization::ReprojectionError<camera::Perspective>::Create(*features[i]);
+        }
+        else if (features[i]->GetFrame().GetCameraModel().GetType() == camera::CameraModel<>::kDoubleSphere)
+        {
+            cost_function = optimization::ReprojectionError<camera::DoubleSphere>::Create(*features[i]);
+        }
+        if (cost_function != nullptr)
+        {
+            problem.AddResidualBlock(cost_function, loss_function, &quatData[0], &tData[0], &landmarks[landmarks.size() - 3]);
+            problem.SetParameterBlockConstant(&landmarks[landmarks.size() - 3]);
+        }
+    }
+    ceres::Solver::Options options;
+    options.max_num_iterations = 10;
+    options.linear_solver_type = ceres::DENSE_SCHUR;
+    options.function_tolerance = 1e-6;
+    options.gradient_tolerance = 1e-6;
+    ceres::Solver::Summary summary;
+    ceres::Solve(options, &problem, &summary);
+    if (!summary.IsSolutionUsable())
+    {
+        return false;
+    }
+    const Quaterniond quatRes = Map<const Quaterniond>(&quatData[0]);
+    const Vector3d tRes = Map<const Vector3d>(&tData[0]);
+    pose = util::TFUtil::QuaternionTranslationToPoseMatrix(quatRes, tRes);
+    return true;
 }
 
 double PNP::P4P(const std::vector<Vector3d> &xs, const std::vector<Vector3d> &ys, const std::vector<Vector2d> &yns, std::vector<int> indices, const camera::CameraModel<> &camera_model, Matrix<double, 3, 4> &pose) const
@@ -135,9 +196,9 @@ double PNP::P4P(const std::vector<Vector3d> &xs, const std::vector<Vector3d> &ys
     return error;
 }
 
-int PNP::CountInliers(const std::vector<Vector3d> &xs, const std::vector<Vector2d> &yns, const Matrix<double, 3, 4> &pose, const camera::CameraModel<> &camera_model) const
+std::vector<int> PNP::GetInlierIndices(const std::vector<Vector3d> &xs, const std::vector<Vector2d> &yns, const Matrix<double, 3, 4> &pose, const camera::CameraModel<> &camera_model) const
 {
-    int inliers = 0;
+    std::vector<int> indices;
     double thresh = reprojThreshold_ * reprojThreshold_;
     for (int i = 0; i < xs.size(); i++)
     {
@@ -147,9 +208,12 @@ int PNP::CountInliers(const std::vector<Vector3d> &xs, const std::vector<Vector2
             continue;
         }
         double err = (xr - yns[i]).squaredNorm();
-        inliers += (err < thresh) ? 1 : 0;
+        if (err < thresh)
+        {
+            indices.push_back(i);
+        }
     }
-    return inliers;
+    return indices;
 }
 
 }

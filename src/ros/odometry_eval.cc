@@ -1,6 +1,7 @@
 #include "odometry_eval.h"
 
 #include "odometry/pnp.h"
+#include "optimization/bundle_adjuster.h"
 #include "module/tracking_module.h"
 
 #include "geometry_msgs/PoseStamped.h"
@@ -26,8 +27,9 @@ OdometryEval::OdometryEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle 
     nhp_.param("bundle_adjustment_logging", logCeres, false);
 
     unique_ptr<odometry::PNP> pnp(new odometry::PNP(iterations, reprojThresh));
+    unique_ptr<optimization::BundleAdjuster> bundleAdjuster(new optimization::BundleAdjuster(baMaxIter, logCeres));
 
-    odometryModule_.reset(new module::OdometryModule(pnp));
+    odometryModule_.reset(new module::OdometryModule(pnp, bundleAdjuster));
 }
 
 void OdometryEval::InitPublishers()
@@ -50,6 +52,7 @@ void OdometryEval::ProcessFrame(unique_ptr<data::Frame> &&frame)
 
 void OdometryEval::Finish()
 {
+    odometryModule_->BundleAdjust(trackingModule_->GetLandmarks());
 }
 
 void OdometryEval::GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data)

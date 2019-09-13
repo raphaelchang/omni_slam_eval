@@ -20,11 +20,13 @@ public:
     }
 
     template<typename T>
-    bool operator()(const T* const camera_pose, const T* const point, T *reproj_error) const
+    bool operator()(const T* const camera_orientation, const T* const camera_translation, const T* const point, T *reproj_error) const
     {
         Matrix<T, 2, 1> reprojPoint;
         C<T> camera(feature_.GetFrame().GetCameraModel());
-        const Matrix<T, 3, 4> pose = Map<const Matrix<T, 3, 4>>(camera_pose);
+        const Quaternion<T> orientation = Map<const Quaternion<T>>(camera_orientation);
+        const Matrix<T, 3, 1> translation = Map<const Matrix<T, 3, 1>>(camera_translation);
+        const Matrix<T, 3, 4> pose = util::TFUtil::QuaternionTranslationToPoseMatrix(orientation, translation);
         const Matrix<T, 3, 1> worldPt = Map<const Matrix<T, 3, 1>>(point);
         const Matrix<T, 3, 1> camPt = util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(pose, worldPt));
         camera.ProjectToImage(camPt, reprojPoint);
@@ -35,7 +37,7 @@ public:
 
     static ceres::CostFunction* Create(const data::Feature &feature)
     {
-        return new ceres::AutoDiffCostFunction<ReprojectionError, 2, 12, 3>(new ReprojectionError<C>(feature));
+        return new ceres::AutoDiffCostFunction<ReprojectionError, 2, 4, 3, 3>(new ReprojectionError<C>(feature));
     }
 
 private:

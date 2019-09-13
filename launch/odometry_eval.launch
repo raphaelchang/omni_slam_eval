@@ -18,7 +18,7 @@
             camera_model: '$(arg camera_model)'
             camera_parameters: $(arg camera_params)
             detector_type: 'GFTT'
-            detector_parameters: {maxCorners: 5000, qualityLevel: 0.001, minDistance: 5, blockSize: 5}
+            detector_parameters: {maxCorners: 1000, qualityLevel: 0.001, minDistance: 5, blockSize: 5}
             tracker_window_size: 128
             tracker_num_scales: 4
             tracker_delta_pixel_error_threshold: 3.0
