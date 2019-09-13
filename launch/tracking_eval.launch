@@ -10,7 +10,7 @@
         <param name="image_topic" value="/unity_ros/Sphere/FisheyeCamera/image_raw" />
         <param name="depth_image_topic" value="/unity_ros/Sphere/FisheyeDepthCamera/image_raw" />
         <param name="pose_topic" value="/unity_ros/Sphere/TrueState/pose" />
-        <param name="tracked_image_topic" value="/omni_slam_eval/tracked" />
+        <param name="tracked_image_topic" value="/omni_slam/tracked" />
         <param name="rate" value="$(arg rate)" />
         <rosparam subst_value="true">
             camera_model: '$(arg camera_model)'

@@ -34,6 +34,7 @@ public:
     void Redetect();
 
     std::vector<data::Landmark>& GetLandmarks();
+    std::vector<std::unique_ptr<data::Frame>>& GetFrames();
 
     Stats& GetStats();
     void Visualize(cv::Mat &base_img);

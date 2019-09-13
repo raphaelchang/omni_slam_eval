@@ -135,6 +135,11 @@ std::vector<data::Landmark>& TrackingModule::GetLandmarks()
     return landmarks_;
 }
 
+std::vector<std::unique_ptr<data::Frame>>& TrackingModule::GetFrames()
+{
+    return frames_;
+}
+
 TrackingModule::Stats& TrackingModule::GetStats()
 {
     return stats_;

@@ -37,7 +37,7 @@ inline T FastAtan2(T y, T x)
 }
 
 template<typename T>
-inline bool Roots(T b, T c,T &r1, T &r2)
+inline bool Roots(T b, T c, T &r1, T &r2)
 {
     T v = b * b - 4.0 * c;
     if (v < 0.)
