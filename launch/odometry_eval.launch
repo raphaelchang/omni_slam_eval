@@ -20,14 +20,14 @@
             camera_model: '$(arg camera_model)'
             camera_parameters: $(arg camera_params)
             detector_type: 'GFTT'
-            detector_parameters: {maxCorners: 1000, qualityLevel: 0.001, minDistance: 5, blockSize: 5}
+            detector_parameters: {maxCorners: 2000, qualityLevel: 0.001, minDistance: 5, blockSize: 5}
             tracker_window_size: 128
             tracker_num_scales: 4
             tracker_delta_pixel_error_threshold: 3.0
             tracker_error_threshold: 20.0
-            min_features_per_region: 10
+            min_features_per_region: 100
             pnp_inlier_threshold: 3.0
-            pnp_iterations: 2000
+            pnp_iterations: 3000
             bundle_adjustment_max_iterations: 1000
             bundle_adjustment_loss_coefficient: 0.05
             bundle_adjustment_logging: true
