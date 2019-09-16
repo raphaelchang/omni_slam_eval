@@ -23,10 +23,12 @@
             tracker_delta_pixel_error_threshold: 3.0
             tracker_error_threshold: 20.0
             min_features_per_region: 10
-            max_reprojection_error: 0.0
+            max_reprojection_error: 5.0
             min_triangulation_angle: 3.0
             bundle_adjustment_max_iterations: 1000
+            bundle_adjustment_loss_coefficient: 0.1
             bundle_adjustment_logging: true
+            bundle_adjustment_num_threads: 20
         </rosparam>
     </node>
 </launch>

@@ -11,8 +11,10 @@
         <param name="depth_image_topic" value="/unity_ros/Sphere/FisheyeDepthCamera/image_raw" />
         <param name="pose_topic" value="/unity_ros/Sphere/TrueState/pose" />
         <param name="tracked_image_topic" value="/omni_slam/tracked" />
-        <param name="odometry_topic" value="/omni_slam/odometry" />
+        <param name="odometry_estimate_topic" value="/omni_slam/odometry" />
         <param name="odometry_ground_truth_topic" value="/omni_slam/odometry_truth" />
+        <param name="path_estimate_topic" value="/omni_slam/odometry_path" />
+        <param name="path_ground_truth_topic" value="/omni_slam/odometry_path_truth" />
         <param name="rate" value="$(arg rate)" />
         <rosparam subst_value="true">
             camera_model: '$(arg camera_model)'
@@ -24,10 +26,12 @@
             tracker_delta_pixel_error_threshold: 3.0
             tracker_error_threshold: 20.0
             min_features_per_region: 10
-            pnp_inlier_threshold: 5.0
-            pnp_iterations: 1000
+            pnp_inlier_threshold: 3.0
+            pnp_iterations: 2000
             bundle_adjustment_max_iterations: 1000
+            bundle_adjustment_loss_coefficient: 0.05
             bundle_adjustment_logging: true
+            bundle_adjustment_num_threads: 20
         </rosparam>
     </node>
 </launch>

@@ -40,8 +40,6 @@ protected:
 
     std::unique_ptr<camera::CameraModel<>> cameraModel_;
 
-    int frameNum_{0};
-
 private:
     void FrameCallback(const sensor_msgs::ImageConstPtr &image, const sensor_msgs::ImageConstPtr &depth_image, const geometry_msgs::PoseStamped::ConstPtr &pose);
 

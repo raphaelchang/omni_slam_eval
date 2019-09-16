@@ -25,7 +25,13 @@ int Triangulator::Triangulate(std::vector<data::Landmark> &landmarks) const
         {
             if (CheckReprojectionErrors(landmark.GetObservations(), point))
             {
-                landmark.SetEstimatedPosition(point);
+                std::vector<int> frameIds;
+                frameIds.reserve(landmark.GetObservations().size());
+                for (data::Feature &obs : landmark.GetObservations())
+                {
+                    frameIds.push_back(obs.GetFrame().GetID());
+                }
+                landmark.SetEstimatedPosition(point, frameIds);
                 numSuccess++;
             }
         }

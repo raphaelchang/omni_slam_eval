@@ -25,11 +25,14 @@ private:
     void Finish();
     void GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data);
     void Visualize(cv_bridge::CvImagePtr &base_img);
+    void PublishOdometry();
 
     std::unique_ptr<module::OdometryModule> odometryModule_;
 
     ::ros::Publisher odometryPublisher_;
     ::ros::Publisher odometryGndPublisher_;
+    ::ros::Publisher pathPublisher_;
+    ::ros::Publisher pathGndPublisher_;
 };
 
 }

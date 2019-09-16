@@ -17,7 +17,7 @@ namespace odometry
 class PNP
 {
 public:
-    PNP(int ransac_iterations, double reprojection_threshold);
+    PNP(int ransac_iterations, double reprojection_threshold, int num_refine_threads = 1);
     int Compute(const std::vector<data::Landmark> &landmarks, data::Frame &frame) const;
 
 private:
@@ -28,6 +28,7 @@ private:
 
     int ransacIterations_;
     double reprojThreshold_;
+    int numRefineThreads_;
 };
 
 }

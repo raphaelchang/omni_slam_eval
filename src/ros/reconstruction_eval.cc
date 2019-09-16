@@ -20,15 +20,19 @@ ReconstructionEval::ReconstructionEval(const ::ros::NodeHandle &nh, const ::ros:
     double maxReprojError;
     double minTriAngle;
     int baMaxIter;
+    double baLossCoeff;
     bool logCeres;
+    int numCeresThreads;
 
     nhp_.param("max_reprojection_error", maxReprojError, 0.0);
     nhp_.param("min_triangulation_angle", minTriAngle, 1.0);
     nhp_.param("bundle_adjustment_max_iterations", baMaxIter, 500);
+    nhp_.param("bundle_adjustment_loss_coefficient", baLossCoeff, 0.1);
     nhp_.param("bundle_adjustment_logging", logCeres, false);
+    nhp_.param("bundle_adjustment_num_threads", numCeresThreads, 1);
 
     unique_ptr<reconstruction::Triangulator> triangulator(new reconstruction::Triangulator(maxReprojError, minTriAngle));
-    unique_ptr<optimization::BundleAdjuster> bundleAdjuster(new optimization::BundleAdjuster(baMaxIter, logCeres));
+    unique_ptr<optimization::BundleAdjuster> bundleAdjuster(new optimization::BundleAdjuster(baMaxIter, baLossCoeff, numCeresThreads, logCeres));
 
     reconstructionModule_.reset(new module::ReconstructionModule(triangulator, bundleAdjuster));
 }
@@ -50,6 +54,7 @@ void ReconstructionEval::ProcessFrame(unique_ptr<data::Frame> &&frame)
 
 void ReconstructionEval::Finish()
 {
+    ROS_INFO("Performing bundle adjustment...");
     reconstructionModule_->BundleAdjust(trackingModule_->GetLandmarks());
 
     pcl::PointCloud<pcl::PointXYZRGB> cloud;

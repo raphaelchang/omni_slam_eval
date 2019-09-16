@@ -12,12 +12,15 @@ namespace optimization
 class BundleAdjuster
 {
 public:
-    BundleAdjuster(int max_iterations = 500, bool log = false);
+    BundleAdjuster(int max_iterations = 500, double loss_coeff = 0.1, int num_threads = 1, bool log = false);
 
     bool Optimize(std::vector<data::Landmark> &landmarks);
 
+private:
     std::unique_ptr<ceres::Problem> problem_;
     ceres::Solver::Options solverOptions_;
+
+    double lossCoeff_;
 };
 
 }

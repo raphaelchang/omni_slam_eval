@@ -10,12 +10,15 @@ namespace omni_slam
 namespace optimization
 {
 
-BundleAdjuster::BundleAdjuster(int max_iterations, bool log)
+BundleAdjuster::BundleAdjuster(int max_iterations, double loss_coeff, int num_threads, bool log)
+    : lossCoeff_(loss_coeff)
 {
     problem_.reset(new ceres::Problem());
     solverOptions_.max_num_iterations = max_iterations;
     solverOptions_.linear_solver_type = ceres::ITERATIVE_SCHUR;
     solverOptions_.preconditioner_type = ceres::SCHUR_JACOBI;
+    solverOptions_.num_threads = num_threads;
+    solverOptions_.use_inner_iterations = true;
     solverOptions_.minimizer_progress_to_stdout = log;
     solverOptions_.logging_type = log ? ceres::PER_MINIMIZER_ITERATION : ceres::SILENT;
 }
@@ -26,7 +29,7 @@ bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
     landmarkEstimates.reserve(3 * landmarks.size());
     std::map<int, std::pair<std::vector<double>, std::vector<double>>> framePoses;
     std::map<int, data::Frame*> estFrames;
-    ceres::LossFunction *loss_function = new ceres::HuberLoss(1.0);
+    ceres::LossFunction *loss_function = new ceres::HuberLoss(lossCoeff_);
     for (const data::Landmark &landmark : landmarks)
     {
         bool hasEstCameraPoses = false;
@@ -58,12 +61,15 @@ bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
         {
             continue;
         }
-        const std::vector<data::Feature> obs = landmark.HasEstimatedPosition() ? landmark.GetObservationsForEstimate() : landmark.GetObservations();
-        for (const data::Feature &feature : obs)
+        for (const data::Feature &feature : landmark.GetObservations())
         {
             if (!feature.GetFrame().HasEstimatedPose() && feature.GetFrame().HasPose())
             {
                 if (!landmark.HasEstimatedPosition())
+                {
+                    continue;
+                }
+                if (!landmark.IsEstimatedByFrame(feature.GetFrame().GetID()))
                 {
                     continue;
                 }
@@ -82,6 +88,10 @@ bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
             }
             else if (feature.GetFrame().HasEstimatedPose())
             {
+                if (!(feature.GetFrame().IsEstimatedByLandmark(landmark.GetID()) || (landmark.HasEstimatedPosition() && landmark.IsEstimatedByFrame(feature.GetFrame().GetID()))))
+                {
+                    continue;
+                }
                 if (framePoses.find(feature.GetFrame().GetID()) == framePoses.end())
                 {
                     const Matrix<double, 3, 4> &pose = feature.GetFrame().GetInversePose();
@@ -115,10 +125,6 @@ bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
         }
     }
 
-    if (solverOptions_.minimizer_progress_to_stdout)
-    {
-        std::cout << "Running bundle adjustment..." << std::endl;
-    }
     ceres::Solver::Summary summary;
     ceres::Solve(solverOptions_, problem_.get(), &summary);
     if (solverOptions_.minimizer_progress_to_stdout)

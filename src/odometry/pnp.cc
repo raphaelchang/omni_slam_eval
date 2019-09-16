@@ -16,9 +16,10 @@ namespace omni_slam
 namespace odometry
 {
 
-PNP::PNP(int ransac_iterations, double reprojection_threshold)
+PNP::PNP(int ransac_iterations, double reprojection_threshold, int num_refine_threads)
     : ransacIterations_(ransac_iterations),
-    reprojThreshold_(reprojection_threshold)
+    reprojThreshold_(reprojection_threshold),
+    numRefineThreads_(num_refine_threads)
 {
 }
 
@@ -28,6 +29,7 @@ int PNP::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &fram
     std::vector<Vector2d> yns;
     std::vector<Vector3d> ys;
     std::vector<const data::Feature*> features;
+    std::map<int, int> indexToId;
     for (const data::Landmark &landmark : landmarks)
     {
         if (landmark.IsObservedInFrame(frame.GetID()))
@@ -50,6 +52,7 @@ int PNP::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &fram
             yns.push_back(pix);
             ys.push_back(feat->GetBearing());
             features.push_back(feat);
+            indexToId[xs.size() - 1] = landmark.GetID();
         }
     }
     Matrix<double, 3, 4> pose;
@@ -59,13 +62,20 @@ int PNP::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &fram
     {
         Refine(xs, features, indices, pose);
     }
-    frame.SetEstimatedInversePose(pose);
+    std::vector<int> inlierIds;
+    inlierIds.reserve(indices.size());
+    for (int inx : indices)
+    {
+        inlierIds.push_back(indexToId[inx]);
+    }
+    frame.SetEstimatedInversePose(pose, inlierIds);
     return inliers;
 }
 
 int PNP::RANSAC(const std::vector<Vector3d> &xs, const std::vector<Vector3d> &ys, const std::vector<Vector2d> &yns, const camera::CameraModel<> &camera_model, Matrix<double, 3, 4> &pose) const
 {
     int maxInliers = 0;
+    #pragma omp parallel for
     for (int i = 0; i < ransacIterations_; i++)
     {
         std::random_device rd;
@@ -87,10 +97,13 @@ int PNP::RANSAC(const std::vector<Vector3d> &xs, const std::vector<Vector3d> &ys
         }
 
         int inliers = GetInlierIndices(xs, yns, iterPose, camera_model).size();
-        if (inliers > maxInliers)
+        #pragma omp critical
         {
-            maxInliers = inliers;
-            pose = iterPose;
+            if (inliers > maxInliers)
+            {
+                maxInliers = inliers;
+                pose = iterPose;
+            }
         }
     }
     return maxInliers;
@@ -133,6 +146,7 @@ bool PNP::Refine(const std::vector<Vector3d> &xs, const std::vector<const data::
     options.linear_solver_type = ceres::DENSE_SCHUR;
     options.function_tolerance = 1e-6;
     options.gradient_tolerance = 1e-6;
+    options.num_threads = numRefineThreads_;
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
     if (!summary.IsSolutionUsable())

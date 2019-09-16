@@ -6,8 +6,10 @@ namespace omni_slam
 namespace data
 {
 
-Frame::Frame(const int id, cv::Mat &image, cv::Mat &depth_image, Matrix<double, 3, 4>  &pose, double time, camera::CameraModel<> &camera_model)
-    : id_(id),
+int Frame::lastFrameId_ = 0;
+
+Frame::Frame(cv::Mat &image, cv::Mat &depth_image, Matrix<double, 3, 4>  &pose, double time, camera::CameraModel<> &camera_model)
+    : id_(lastFrameId_++),
     image_(image.clone()),
     depthImage_(depth_image.clone()),
     pose_(pose),
@@ -19,8 +21,8 @@ Frame::Frame(const int id, cv::Mat &image, cv::Mat &depth_image, Matrix<double, 
     hasDepth_ = true;
 }
 
-Frame::Frame(const int id, cv::Mat &image, cv::Mat &depth_image, double time, camera::CameraModel<> &camera_model)
-    : id_(id),
+Frame::Frame(cv::Mat &image, cv::Mat &depth_image, double time, camera::CameraModel<> &camera_model)
+    : id_(lastFrameId_++),
     image_(image.clone()),
     depthImage_(depth_image.clone()),
     timeSec_(time),
@@ -30,8 +32,8 @@ Frame::Frame(const int id, cv::Mat &image, cv::Mat &depth_image, double time, ca
     hasDepth_ = true;
 }
 
-Frame::Frame(const int id, cv::Mat &image, Matrix<double, 3, 4>  &pose, double time, camera::CameraModel<> &camera_model)
-    : id_(id),
+Frame::Frame(cv::Mat &image, Matrix<double, 3, 4>  &pose, double time, camera::CameraModel<> &camera_model)
+    : id_(lastFrameId_++),
     image_(image.clone()),
     pose_(pose),
     invPose_(util::TFUtil::InversePoseMatrix(pose)),
@@ -42,8 +44,8 @@ Frame::Frame(const int id, cv::Mat &image, Matrix<double, 3, 4>  &pose, double t
     hasDepth_ = false;
 }
 
-Frame::Frame(const int id, cv::Mat &image, double time, camera::CameraModel<> &camera_model)
-    : id_(id),
+Frame::Frame(cv::Mat &image, double time, camera::CameraModel<> &camera_model)
+    : id_(lastFrameId_++),
     timeSec_(time),
     cameraModel_(camera_model)
 {
@@ -136,10 +138,26 @@ void Frame::SetDepthImage(cv::Mat &depth_image)
     hasDepth_ = true;
 }
 
+void Frame::SetEstimatedPose(const Matrix<double, 3, 4> &pose, const std::vector<int> &landmark_ids)
+{
+    poseEstimate_ = pose;
+    invPoseEstimate_ = util::TFUtil::InversePoseMatrix(pose);
+    estLandmarkIds_ = std::unordered_set<int>(landmark_ids.begin(), landmark_ids.end());
+    hasPoseEstimate_ = true;
+}
+
 void Frame::SetEstimatedPose(const Matrix<double, 3, 4> &pose)
 {
     poseEstimate_ = pose;
     invPoseEstimate_ = util::TFUtil::InversePoseMatrix(pose);
+    hasPoseEstimate_ = true;
+}
+
+void Frame::SetEstimatedInversePose(const Matrix<double, 3, 4> &pose, const std::vector<int> &landmark_ids)
+{
+    invPoseEstimate_ = pose;
+    poseEstimate_ = util::TFUtil::InversePoseMatrix(pose);
+    estLandmarkIds_ = std::unordered_set<int>(landmark_ids.begin(), landmark_ids.end());
     hasPoseEstimate_ = true;
 }
 
@@ -163,6 +181,11 @@ bool Frame::HasDepthImage() const
 bool Frame::HasEstimatedPose() const
 {
     return hasPoseEstimate_;
+}
+
+bool Frame::IsEstimatedByLandmark(const int landmark_id) const
+{
+    return estLandmarkIds_.find(landmark_id) != estLandmarkIds_.end();
 }
 
 void Frame::CompressImages()
@@ -201,6 +224,11 @@ void Frame::DecompressImages()
 bool Frame::IsCompressed() const
 {
     return isCompressed_;
+}
+
+const double Frame::GetTime() const
+{
+    return timeSec_;
 }
 
 }

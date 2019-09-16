@@ -75,11 +75,9 @@ void EvalBase::FrameCallback(const sensor_msgs::ImageConstPtr &image, const sens
     cv::Mat depthFloatImg;
     cvDepthImage->image.convertTo(depthFloatImg, CV_64FC1, 500. / 65535);
 
-    ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(frameNum_, monoImg, depthFloatImg, posemat, pose->header.stamp.toSec(), *cameraModel_)));
+    ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, depthFloatImg, posemat, pose->header.stamp.toSec(), *cameraModel_)));
 
     Visualize(cvImage);
-
-    frameNum_++;
 }
 
 void EvalBase::Finish()

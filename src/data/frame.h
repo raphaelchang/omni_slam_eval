@@ -3,6 +3,7 @@
 
 #include <opencv2/opencv.hpp>
 #include <Eigen/Dense>
+#include <unordered_set>
 #include "camera/camera_model.h"
 
 using namespace Eigen;
@@ -15,10 +16,10 @@ namespace data
 class Frame
 {
 public:
-    Frame(const int id, cv::Mat &image, cv::Mat &depth_image, Matrix<double, 3, 4>  &pose, double time, camera::CameraModel<> &camera_model);
-    Frame(const int id, cv::Mat &image, cv::Mat &depth_image, double time, camera::CameraModel<> &camera_model);
-    Frame(const int id, cv::Mat &image, Matrix<double, 3, 4>  &pose, double time, camera::CameraModel<> &camera_model);
-    Frame(const int id, cv::Mat &image, double time, camera::CameraModel<> &camera_model);
+    Frame(cv::Mat &image, cv::Mat &depth_image, Matrix<double, 3, 4>  &pose, double time, camera::CameraModel<> &camera_model);
+    Frame(cv::Mat &image, cv::Mat &depth_image, double time, camera::CameraModel<> &camera_model);
+    Frame(cv::Mat &image, Matrix<double, 3, 4>  &pose, double time, camera::CameraModel<> &camera_model);
+    Frame(cv::Mat &image, double time, camera::CameraModel<> &camera_model);
     Frame(const Frame &other);
 
     const Matrix<double, 3, 4>& GetPose() const;
@@ -29,14 +30,18 @@ public:
     const Matrix<double, 3, 4>& GetEstimatedPose() const;
     const Matrix<double, 3, 4>& GetEstimatedInversePose() const;
     const int GetID() const;
+    const double GetTime() const;
 
     bool HasPose() const;
     bool HasDepthImage() const;
     bool HasEstimatedPose() const;
+    bool IsEstimatedByLandmark(const int landmark_id) const;
 
     void SetPose(Matrix<double, 3, 4> &pose);
     void SetDepthImage(cv::Mat &depth_image);
+    void SetEstimatedPose(const Matrix<double, 3, 4> &pose, const std::vector<int> &landmark_ids);
     void SetEstimatedPose(const Matrix<double, 3, 4> &pose);
+    void SetEstimatedInversePose(const Matrix<double, 3, 4> &pose, const std::vector<int> &landmark_ids);
     void SetEstimatedInversePose(const Matrix<double, 3, 4> &pose);
 
     void CompressImages();
@@ -56,11 +61,15 @@ private:
     double timeSec_;
     camera::CameraModel<> &cameraModel_;
 
+    std::unordered_set<int> estLandmarkIds_;
+
     bool hasPose_;
     bool hasDepth_;
     bool hasPoseEstimate_{false};
 
     bool isCompressed_{false};
+
+    static int lastFrameId_;
 };
 
 }

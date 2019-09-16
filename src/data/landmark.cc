@@ -5,7 +5,10 @@ namespace omni_slam
 namespace data
 {
 
+int Landmark::lastLandmarkId_ = 0;
+
 Landmark::Landmark()
+    : id_(lastLandmarkId_++)
 {
 }
 
@@ -21,7 +24,7 @@ void Landmark::AddObservation(Feature obs, bool compute_gnd)
         if (obs.HasEstimatedWorldPoint())
         {
             posEstimate_ = obs.GetEstimatedWorldPoint();
-            obsForEst_.push_back(obs);
+            estFrameIds_.insert(obs.GetFrame().GetID());
             hasPosEstimate_ = true;
         }
     }
@@ -36,11 +39,6 @@ void Landmark::AddObservation(Feature obs, bool compute_gnd)
 const std::vector<Feature>& Landmark::GetObservations() const
 {
     return obs_;
-}
-
-const std::vector<Feature>& Landmark::GetObservationsForEstimate() const
-{
-    return obsForEst_;
 }
 
 std::vector<Feature>& Landmark::GetObservations()
@@ -83,16 +81,22 @@ const Feature* Landmark::GetObservationByFrameID(const int frame_id) const
     return &obs_[idToIndex_.at(frame_id)];
 }
 
+void Landmark::SetEstimatedPosition(const Vector3d &pos, const std::vector<int> &frame_ids)
+{
+    posEstimate_ = pos;
+    estFrameIds_ = std::unordered_set<int>(frame_ids.begin(), frame_ids.end());
+    hasPosEstimate_ = true;
+}
+
 void Landmark::SetEstimatedPosition(const Vector3d &pos)
 {
     posEstimate_ = pos;
-    obsForEst_.clear();
-    obsForEst_.reserve(obs_.size());
-    for (data::Feature &feat : obs_)
-    {
-        obsForEst_.push_back(feat);
-    }
     hasPosEstimate_ = true;
+}
+
+const int Landmark::GetID() const
+{
+    return id_;
 }
 
 Vector3d Landmark::GetGroundTruth() const
@@ -113,6 +117,11 @@ bool Landmark::HasGroundTruth() const
 bool Landmark::HasEstimatedPosition() const
 {
     return hasPosEstimate_;
+}
+
+bool Landmark::IsEstimatedByFrame(const int frame_id) const
+{
+    return estFrameIds_.find(frame_id) != estFrameIds_.end();
 }
 
 }
