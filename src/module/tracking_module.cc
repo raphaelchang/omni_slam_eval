@@ -11,15 +11,16 @@ namespace omni_slam
 namespace module
 {
 
-TrackingModule::TrackingModule(std::unique_ptr<feature::Detector> &detector, std::unique_ptr<feature::Tracker> &tracker, int minFeaturesRegion)
+TrackingModule::TrackingModule(std::unique_ptr<feature::Detector> &detector, std::unique_ptr<feature::Tracker> &tracker, std::unique_ptr<odometry::FivePoint> &checker, int minFeaturesRegion)
     : detector_(std::move(detector)),
     tracker_(std::move(tracker)),
+    fivePointChecker_(std::move(checker)),
     minFeaturesRegion_(minFeaturesRegion)
 {
 }
 
-TrackingModule::TrackingModule(std::unique_ptr<feature::Detector> &&detector, std::unique_ptr<feature::Tracker> &&tracker, int minFeaturesRegion)
-    : TrackingModule(detector, tracker, minFeaturesRegion)
+TrackingModule::TrackingModule(std::unique_ptr<feature::Detector> &&detector, std::unique_ptr<feature::Tracker> &&tracker, std::unique_ptr<odometry::FivePoint> &&checker, int minFeaturesRegion)
+    : TrackingModule(detector, tracker, checker, minFeaturesRegion)
 {
 }
 
@@ -47,7 +48,23 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
     }
 
     vector<double> trackErrors;
-    tracker_->Track(landmarks_, *frames_.back(), trackErrors);
+    std::vector<data::Landmark> landmarksTemp(landmarks_);
+    tracker_->Track(landmarksTemp, *frames_.back(), trackErrors);
+
+    if (fivePointChecker_)
+    {
+        Matrix3d E;
+        std::vector<int> inlierIndices;
+        fivePointChecker_->Compute(landmarksTemp, **next(frames_.rbegin()), *frames_.back(), E, inlierIndices);
+        for (int inx : inlierIndices)
+        {
+            landmarks_[inx].AddObservation(*landmarksTemp[inx].GetObservationByFrameID(frames_.back()->GetID()));
+        }
+    }
+    else
+    {
+        landmarks_ = std::move(landmarksTemp);
+    }
 
     int i = 0;
     int numGood = 0;

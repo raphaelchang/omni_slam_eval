@@ -4,6 +4,7 @@
 #include <opencv2/opencv.hpp>
 #include "data/frame.h"
 #include "data/landmark.h"
+#include "odometry/five_point.h"
 #include <vector>
 
 namespace omni_slam

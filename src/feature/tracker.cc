@@ -59,25 +59,28 @@ int Tracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_fram
     for (int i = 0; i < results.size(); i++)
     {
         data::Landmark &landmark = landmarks[orig_inx[i]];
-        if (landmark.HasGroundTruth() && cur_frame.HasPose())
+        if (deltaPixErrThresh_ > 0)
         {
-            Vector2d pixel_gnd;
-            Vector2d pixel_gnd_prev;
-            if (!cur_frame.GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(cur_frame.GetInversePose(), landmark.GetGroundTruth())), pixel_gnd) || !prevFrame_->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(prevFrame_->GetInversePose(), landmark.GetGroundTruth())), pixel_gnd_prev))
+            if (landmark.HasGroundTruth() && cur_frame.HasPose())
             {
-                continue;
-            }
-            else
-            {
-                Vector2d pixel_cur;
-                pixel_cur << results[i].x, results[i].y;
-                Vector2d pixel_prev;
-                pixel_prev << points_to_track[i].x, points_to_track[i].y;
-                double cur_error = (pixel_cur - pixel_gnd).norm();
-                double prev_error = (pixel_prev - pixel_gnd_prev).norm();
-                if (cur_error - prev_error > deltaPixErrThresh_)
+                Vector2d pixel_gnd;
+                Vector2d pixel_gnd_prev;
+                if (!cur_frame.GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(cur_frame.GetInversePose(), landmark.GetGroundTruth())), pixel_gnd) || !prevFrame_->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(prevFrame_->GetInversePose(), landmark.GetGroundTruth())), pixel_gnd_prev))
                 {
                     continue;
+                }
+                else
+                {
+                    Vector2d pixel_cur;
+                    pixel_cur << results[i].x, results[i].y;
+                    Vector2d pixel_prev;
+                    pixel_prev << points_to_track[i].x, points_to_track[i].y;
+                    double cur_error = (pixel_cur - pixel_gnd).norm();
+                    double prev_error = (pixel_prev - pixel_gnd_prev).norm();
+                    if (cur_error - prev_error > deltaPixErrThresh_)
+                    {
+                        continue;
+                    }
                 }
             }
         }

@@ -2,6 +2,7 @@
 
 #include "feature/tracker.h"
 #include "feature/detector.h"
+#include "odometry/five_point.h"
 
 using namespace std;
 
@@ -16,6 +17,8 @@ TrackingEval::TrackingEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle 
     string detectorType;
     int trackerWindowSize;
     int trackerNumScales;
+    double fivePointThreshold;
+    int fivePointRansacIterations;
     double trackerDeltaPixelErrorThresh;
     double trackerErrorThresh;
     map<string, double> detectorParams;
@@ -24,6 +27,8 @@ TrackingEval::TrackingEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle 
     nhp_.param("detector_type", detectorType, string("GFTT"));
     nhp_.param("tracker_window_size", trackerWindowSize, 128);
     nhp_.param("tracker_num_scales", trackerNumScales, 4);
+    nhp_.param("tracker_checker_epipolar_threshold", fivePointThreshold, 0.01745240643);
+    nhp_.param("tracker_checker_iterations", fivePointRansacIterations, 1000);
     nhp_.param("tracker_delta_pixel_error_threshold", trackerDeltaPixelErrorThresh, 5.0);
     nhp_.param("tracker_error_threshold", trackerErrorThresh, 20.);
     nhp_.param("min_features_per_region", minFeaturesRegion, 5);
@@ -41,7 +46,9 @@ TrackingEval::TrackingEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle 
 
     unique_ptr<feature::Tracker> tracker(new feature::Tracker(trackerWindowSize, trackerNumScales, trackerDeltaPixelErrorThresh, trackerErrorThresh));
 
-    trackingModule_.reset(new module::TrackingModule(detector, tracker, minFeaturesRegion));
+    unique_ptr<odometry::FivePoint> checker(new odometry::FivePoint(fivePointRansacIterations, fivePointThreshold));
+
+    trackingModule_.reset(new module::TrackingModule(detector, tracker, checker, minFeaturesRegion));
 }
 
 void TrackingEval::InitPublishers()

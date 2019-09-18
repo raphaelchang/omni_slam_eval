@@ -6,7 +6,7 @@ set(CMAKE_VERBOSE_MAKEFILE FALSE)
 
 add_definitions("-std=c++17")
 if (NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
+  set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
 endif (NOT CMAKE_BUILD_TYPE)
 
 # find catkin dependencies
@@ -68,6 +68,7 @@ add_library(omni_slam_eval_lib
   src/feature/matcher.cc
   src/reconstruction/triangulator.cc
   src/odometry/pnp.cc
+  src/odometry/five_point.cc
   src/optimization/bundle_adjuster.cc
   src/util/hdf_file.cc
 )

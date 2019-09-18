@@ -23,13 +23,15 @@ PNP::PNP(int ransac_iterations, double reprojection_threshold, int num_refine_th
 {
 }
 
-int PNP::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &frame) const
+int PNP::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &frame, std::vector<int> &inlier_indices) const
 {
     std::vector<Vector3d> xs;
     std::vector<Vector2d> yns;
     std::vector<Vector3d> ys;
     std::vector<const data::Feature*> features;
     std::map<int, int> indexToId;
+    std::map<int, int> indexToLandmarkIndex;
+    int i = 0;
     for (const data::Landmark &landmark : landmarks)
     {
         if (landmark.IsObservedInFrame(frame.GetID()))
@@ -52,8 +54,10 @@ int PNP::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &fram
             yns.push_back(pix);
             ys.push_back(feat->GetBearing());
             features.push_back(feat);
+            indexToLandmarkIndex[xs.size() - 1] = i;
             indexToId[xs.size() - 1] = landmark.GetID();
         }
+        i++;
     }
     Matrix<double, 3, 4> pose;
     int inliers = RANSAC(xs, ys, yns, frame.GetCameraModel(), pose);
@@ -64,12 +68,21 @@ int PNP::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &fram
     }
     std::vector<int> inlierIds;
     inlierIds.reserve(indices.size());
+    inlier_indices.clear();
+    inlier_indices.reserve(indices.size());
     for (int inx : indices)
     {
         inlierIds.push_back(indexToId[inx]);
+        inlier_indices.push_back(indexToLandmarkIndex[inx]);
     }
     frame.SetEstimatedInversePose(pose, inlierIds);
     return inliers;
+}
+
+int PNP::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &frame) const
+{
+    std::vector<int> temp;
+    return Compute(landmarks, frame, temp);
 }
 
 int PNP::RANSAC(const std::vector<Vector3d> &xs, const std::vector<Vector3d> &ys, const std::vector<Vector2d> &yns, const camera::CameraModel<> &camera_model, Matrix<double, 3, 4> &pose) const

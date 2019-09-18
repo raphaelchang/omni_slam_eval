@@ -23,7 +23,9 @@
             detector_parameters: {maxCorners: 2000, qualityLevel: 0.001, minDistance: 5, blockSize: 5}
             tracker_window_size: 128
             tracker_num_scales: 4
-            tracker_delta_pixel_error_threshold: 3.0
+            tracker_checker_epipolar_threshold: 0.008
+            tracker_checker_iterations: 1000
+            tracker_delta_pixel_error_threshold: 0.0
             tracker_error_threshold: 20.0
             min_features_per_region: 100
             pnp_inlier_threshold: 3.0

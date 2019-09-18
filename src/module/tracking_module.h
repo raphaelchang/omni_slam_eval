@@ -7,6 +7,7 @@
 
 #include "feature/tracker.h"
 #include "feature/detector.h"
+#include "odometry/five_point.h"
 #include "data/frame.h"
 #include "data/landmark.h"
 
@@ -27,8 +28,8 @@ public:
         std::vector<double> failureRadDists;
     };
 
-    TrackingModule(std::unique_ptr<feature::Detector> &detector, std::unique_ptr<feature::Tracker> &tracker, int minFeaturesRegion = 5);
-    TrackingModule(std::unique_ptr<feature::Detector> &&detector, std::unique_ptr<feature::Tracker> &&tracker, int minFeaturesRegion = 5);
+    TrackingModule(std::unique_ptr<feature::Detector> &detector, std::unique_ptr<feature::Tracker> &tracker, std::unique_ptr<odometry::FivePoint> &checker, int minFeaturesRegion = 5);
+    TrackingModule(std::unique_ptr<feature::Detector> &&detector, std::unique_ptr<feature::Tracker> &&tracker, std::unique_ptr<odometry::FivePoint> &&checker, int minFeaturesRegion = 5);
 
     void Update(std::unique_ptr<data::Frame> &frame);
     void Redetect();
@@ -57,6 +58,7 @@ private:
 
     std::shared_ptr<feature::Detector> detector_;
     std::shared_ptr<feature::Tracker> tracker_;
+    std::shared_ptr<odometry::FivePoint> fivePointChecker_;
 
     std::vector<std::unique_ptr<data::Frame>> frames_;
     std::vector<data::Landmark> landmarks_;

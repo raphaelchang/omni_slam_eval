@@ -18,6 +18,7 @@ class PNP
 {
 public:
     PNP(int ransac_iterations, double reprojection_threshold, int num_refine_threads = 1);
+    int Compute(const std::vector<data::Landmark> &landmarks, data::Frame &frame, std::vector<int> &inlier_indices) const;
     int Compute(const std::vector<data::Landmark> &landmarks, data::Frame &frame) const;
 
 private:
