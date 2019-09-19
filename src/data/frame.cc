@@ -22,6 +22,7 @@ Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, cv::Mat &depth_image, Matrix
     hasPose_ = true;
     hasDepth_ = true;
     hasStereo_ = true;
+    poseEstimate_ = invPoseEstimate_ = util::TFUtil::IdentityPoseMatrix<double>();
 }
 
 Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, Matrix<double, 3, 4> &stereo_pose, double time, camera::CameraModel<> &camera_model)
@@ -35,6 +36,7 @@ Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, Matrix<double, 3, 4> &stereo
     hasPose_ = false;
     hasDepth_ = false;
     hasStereo_ = true;
+    pose_ = invPose_ = poseEstimate_ = invPoseEstimate_ = util::TFUtil::IdentityPoseMatrix<double>();
 }
 
 Frame::Frame(cv::Mat &image, cv::Mat &depth_image, double time, camera::CameraModel<> &camera_model)
@@ -47,6 +49,7 @@ Frame::Frame(cv::Mat &image, cv::Mat &depth_image, double time, camera::CameraMo
     hasPose_ = false;
     hasDepth_ = true;
     hasStereo_ = false;
+    pose_ = invPose_ = poseEstimate_ = invPoseEstimate_ = util::TFUtil::IdentityPoseMatrix<double>();
 }
 
 Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, cv::Mat &depth_image, Matrix<double, 3, 4> &stereo_pose, double time, camera::CameraModel<> &camera_model)
@@ -61,6 +64,7 @@ Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, cv::Mat &depth_image, Matrix
     hasPose_ = false;
     hasDepth_ = true;
     hasStereo_ = true;
+    pose_ = invPose_ = poseEstimate_ = invPoseEstimate_ = util::TFUtil::IdentityPoseMatrix<double>();
 }
 
 Frame::Frame(cv::Mat &image, Matrix<double, 3, 4>  &pose, double time, camera::CameraModel<> &camera_model)
@@ -74,6 +78,7 @@ Frame::Frame(cv::Mat &image, Matrix<double, 3, 4>  &pose, double time, camera::C
     hasPose_ = true;
     hasDepth_ = false;
     hasStereo_ = false;
+    poseEstimate_ = invPoseEstimate_ = util::TFUtil::IdentityPoseMatrix<double>();
 }
 
 Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, Matrix<double, 3, 4>  &pose, Matrix<double, 3, 4> &stereo_pose, double time, camera::CameraModel<> &camera_model)
@@ -89,6 +94,7 @@ Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, Matrix<double, 3, 4>  &pose,
     hasPose_ = true;
     hasDepth_ = false;
     hasStereo_ = true;
+    poseEstimate_ = invPoseEstimate_ = util::TFUtil::IdentityPoseMatrix<double>();
 }
 
 Frame::Frame(cv::Mat &image, Matrix<double, 3, 4>  &pose, cv::Mat &depth_image, double time, camera::CameraModel<> &camera_model)
@@ -103,6 +109,7 @@ Frame::Frame(cv::Mat &image, Matrix<double, 3, 4>  &pose, cv::Mat &depth_image, 
     hasPose_ = true;
     hasDepth_ = true;
     hasStereo_ = false;
+    poseEstimate_ = invPoseEstimate_ = util::TFUtil::IdentityPoseMatrix<double>();
 }
 
 Frame::Frame(cv::Mat &image, double time, camera::CameraModel<> &camera_model)
@@ -113,6 +120,7 @@ Frame::Frame(cv::Mat &image, double time, camera::CameraModel<> &camera_model)
     hasPose_ = false;
     hasDepth_ = false;
     hasStereo_ = false;
+    pose_ = invPose_ = poseEstimate_ = invPoseEstimate_ = util::TFUtil::IdentityPoseMatrix<double>();
 }
 
 Frame::Frame(const Frame &other)

@@ -46,6 +46,7 @@ private:
     public:
         void Init(cv::Size img_size, int num_colors);
         void AddTrack(cv::Point2f gnd, cv::Point2f prev, cv::Point2f cur, double error, int index);
+        void AddTrack(cv::Point2f prev, cv::Point2f cur, int index);
         void Draw(cv::Mat &img);
 
     private:

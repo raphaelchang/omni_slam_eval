@@ -53,6 +53,8 @@ void ReconstructionEval<Stereo>::ProcessFrame(unique_ptr<data::Frame> &&frame)
     this->trackingModule_->Update(frame);
     reconstructionModule_->Update(this->trackingModule_->GetLandmarks());
     this->trackingModule_->Redetect();
+
+    this->visualized_ = false;
 }
 
 template <bool Stereo>

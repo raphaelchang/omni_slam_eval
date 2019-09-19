@@ -88,6 +88,15 @@ inline Matrix<T, 3, 3> GetEssentialMatrixFromPoses(Matrix<T, 3, 4> pose1, Matrix
     return tx * GetRotationFromPoseMatrix(rel);
 }
 
+template <typename T>
+inline Matrix<T, 3, 4> IdentityPoseMatrix()
+{
+    Matrix<T, 3, 4> I;
+    I.template block<3, 3>(0, 0) = Matrix3d::Identity();
+    I.template block<3, 1>(0, 3) = Vector3d::Zero();
+    return I;
+}
+
 }
 }
 }

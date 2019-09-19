@@ -35,7 +35,7 @@ bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
         bool hasEstCameraPoses = false;
         for (const data::Feature &feature : landmark.GetObservations())
         {
-            if (feature.GetFrame().HasEstimatedPose())
+            if (feature.GetFrame().HasEstimatedPose() && feature.GetFrame().IsEstimatedByLandmark(landmark.GetID()))
             {
                 hasEstCameraPoses = true;
             }
@@ -94,7 +94,7 @@ bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
                 }
                 if (framePoses.find(feature.GetFrame().GetID()) == framePoses.end())
                 {
-                    const Matrix<double, 3, 4> &pose = feature.GetFrame().GetInversePose();
+                    const Matrix<double, 3, 4> &pose = feature.GetFrame().GetEstimatedInversePose();
                     Quaterniond quat(pose.block<3, 3>(0, 0));
                     quat.normalize();
                     const Vector3d &t = pose.block<3, 1>(0, 3);

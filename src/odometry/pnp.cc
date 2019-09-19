@@ -50,6 +50,7 @@ int PNP::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &fram
             }
             else
             {
+                i++;
                 continue;
             }
             const data::Feature *feat = landmark.GetObservationByFrameID(frame.GetID());

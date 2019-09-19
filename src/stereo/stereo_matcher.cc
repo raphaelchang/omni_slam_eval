@@ -18,6 +18,19 @@ int StereoMatcher::Match(data::Frame &frame, std::vector<data::Landmark> &landma
     {
         return 0;
     }
+    Matrix<double, 3, 4> framePose;
+    if (frame.HasEstimatedPose())
+    {
+        framePose = frame.GetEstimatedPose();
+    }
+    else if (frame.HasPose())
+    {
+        framePose = frame.GetPose();
+    }
+    else
+    {
+        return 0;
+    }
     std::vector<cv::KeyPoint> pointsToMatch;
     std::vector<Vector3d> bearings1;
     std::vector<int> origInx;
@@ -45,9 +58,7 @@ int StereoMatcher::Match(data::Frame &frame, std::vector<data::Landmark> &landma
     std::vector<int> matchedIndices;
     FindMatches(frame.GetImage(), frame.GetStereoImage(), pointsToMatch, matchedPoints, matchedIndices);
 
-    Matrix<double, 3, 4> I;
-    I.block<3, 3>(0, 0) = Matrix3d::Identity();
-    I.block<3, 1>(0, 3) = Vector3d::Zero();
+    Matrix<double, 3, 4> I = util::TFUtil::IdentityPoseMatrix<double>();
     Matrix3d E = util::TFUtil::GetEssentialMatrixFromPoses(I, frame.GetStereoPose());
     int good = 0;
     #pragma omp parallel for reduction(+:good)
@@ -66,8 +77,7 @@ int StereoMatcher::Match(data::Frame &frame, std::vector<data::Landmark> &landma
         double epiErr2 = std::abs(bearing2.transpose() * epiplane2);
         if (epiErr1 < epipolarThresh_ && epiErr2 < epipolarThresh_)
         {
-            Matrix<double, 3, 4> framePose = frame.HasEstimatedPose() ? frame.GetEstimatedPose() : frame.GetPose();
-            landmarks[origInx[inx]].SetEstimatedPosition(util::TFUtil::TransformPoint(framePose, TriangulateDLT(bearing1, bearing2, I, frame.GetStereoPose())));
+            landmarks[origInx[inx]].SetEstimatedPosition(util::TFUtil::TransformPoint(framePose, TriangulateDLT(bearing1, bearing2, I, frame.GetStereoPose())), std::vector<int>({frame.GetID()}));
             landmarks[origInx[inx]].AddStereoObservation(feat);
             good++;
         }

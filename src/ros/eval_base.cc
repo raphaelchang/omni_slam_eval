@@ -8,6 +8,8 @@
 #include "util/tf_util.h"
 #include "util/hdf_file.h"
 
+#define USE_GROUND_TRUTH
+
 using namespace Eigen;
 
 namespace omni_slam
@@ -103,8 +105,19 @@ void EvalBase<Stereo>::FrameCallback(const sensor_msgs::ImageConstPtr &image, co
     cv::Mat depthFloatImg;
     cvDepthImage->image.convertTo(depthFloatImg, CV_64FC1, 500. / 65535);
 
+#ifdef USE_GROUND_TRUTH
     ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, posemat, depthFloatImg, pose->header.stamp.toSec(), *cameraModel_)));
-
+#else
+    if (first_)
+    {
+        ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, posemat, pose->header.stamp.toSec(), *cameraModel_)));
+        first_ = false;
+    }
+    else
+    {
+        ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, pose->header.stamp.toSec(), *cameraModel_)));
+    }
+#endif
     Visualize(cvImage);
 }
 
@@ -136,7 +149,19 @@ void EvalBase<Stereo>::FrameCallback(const sensor_msgs::ImageConstPtr &image, co
     cv::Mat depthFloatImg;
     cvDepthImage->image.convertTo(depthFloatImg, CV_64FC1, 500. / 65535);
 
+#ifdef USE_GROUND_TRUTH
     ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, monoImg2, depthFloatImg, posemat, stereoPose_, pose->header.stamp.toSec(), *cameraModel_)));
+#else
+    if (first_)
+    {
+        ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, monoImg2, posemat, stereoPose_, pose->header.stamp.toSec(), *cameraModel_)));
+        first_ = false;
+    }
+    else
+    {
+        ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, monoImg2, stereoPose_, pose->header.stamp.toSec(), *cameraModel_)));
+    }
+#endif
 
     Visualize(cvImage, cvStereoImage);
 }

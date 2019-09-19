@@ -62,6 +62,8 @@ void OdometryEval<Stereo>::ProcessFrame(unique_ptr<data::Frame> &&frame)
     this->trackingModule_->Update(frame);
     odometryModule_->Update(this->trackingModule_->GetLandmarks(), *this->trackingModule_->GetFrames().back());
     this->trackingModule_->Redetect();
+
+    this->visualized_ = false;
 }
 
 template <bool Stereo>
@@ -90,9 +92,9 @@ void OdometryEval<Stereo>::PublishOdometry()
 {
     geometry_msgs::PoseStamped poseMsg;
     poseMsg.header.frame_id = "map";
-    if (this->trackingModule_->GetFrames().back()->HasEstimatedPose())
+    if (this->trackingModule_->GetFrames().back()->HasEstimatedPose() || this->trackingModule_->GetFrames().size() == 1)
     {
-        const Matrix<double, 3, 4> &pose = this->trackingModule_->GetFrames().back()->GetEstimatedPose();
+        const Matrix<double, 3, 4> &pose = (this->trackingModule_->GetFrames().size() == 1 && !this->trackingModule_->GetFrames().back()->HasEstimatedPose()) ? this->trackingModule_->GetFrames().back()->GetPose() : this->trackingModule_->GetFrames().back()->GetEstimatedPose();
         poseMsg.pose.position.x = pose(0, 3);
         poseMsg.pose.position.y = pose(1, 3);
         poseMsg.pose.position.z = pose(2, 3);
@@ -122,14 +124,15 @@ void OdometryEval<Stereo>::PublishOdometry()
     nav_msgs::Path pathGnd;
     pathGnd.header.stamp = ::ros::Time::now();
     pathGnd.header.frame_id = "map";
+    bool first = true;
     for (const std::unique_ptr<data::Frame> &frame : this->trackingModule_->GetFrames())
     {
-        if (frame->HasEstimatedPose())
+        if (frame->HasEstimatedPose() || first)
         {
             geometry_msgs::PoseStamped poseMsg;
             poseMsg.header.stamp = ::ros::Time(frame->GetTime());
             poseMsg.header.frame_id = "map";
-            const Matrix<double, 3, 4> &pose = frame->GetEstimatedPose();
+            const Matrix<double, 3, 4> &pose = (first && !frame->HasEstimatedPose()) ? frame->GetPose() : frame->GetEstimatedPose();
             poseMsg.pose.position.x = pose(0, 3);
             poseMsg.pose.position.y = pose(1, 3);
             poseMsg.pose.position.z = pose(2, 3);
@@ -156,6 +159,7 @@ void OdometryEval<Stereo>::PublishOdometry()
             poseMsg.pose.orientation.w = quat.normalized().w();
             pathGnd.poses.push_back(poseMsg);
         }
+        first = false;
     }
     pathPublisher_.publish(path);
     pathGndPublisher_.publish(pathGnd);

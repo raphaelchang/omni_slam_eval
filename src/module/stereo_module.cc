@@ -35,8 +35,15 @@ void StereoModule::Update(data::Frame &frame, std::vector<data::Landmark> &landm
         {
             Matrix<double, 3, 4> framePose = frame.HasEstimatedPose() ? frame.GetEstimatedPose() : frame.GetPose();
             double depth = (landmark.GetEstimatedPosition() - framePose.block<3, 1>(0, 3)).norm();
-            double depthGnd = (landmark.GetGroundTruth() - frame.GetPose().block<3, 1>(0, 3)).norm();
-            visualization_.AddMatch(feat1->GetKeypoint().pt, feat2->GetKeypoint().pt, depth, depthGnd);
+            if (frame.HasPose() && landmark.HasGroundTruth())
+            {
+                double depthGnd = (landmark.GetGroundTruth() - frame.GetPose().block<3, 1>(0, 3)).norm();
+                visualization_.AddMatch(feat1->GetKeypoint().pt, feat2->GetKeypoint().pt, depth, std::abs(depth - depthGnd) / depthGnd);
+            }
+            else
+            {
+                visualization_.AddMatch(feat1->GetKeypoint().pt, feat2->GetKeypoint().pt, depth, 0);
+            }
         }
     }
     frameNum_++;
@@ -58,9 +65,8 @@ void StereoModule::Visualization::Init(cv::Size img_size)
     curDepth_ = cv::Mat::zeros(img_size, CV_8UC3);
 }
 
-void StereoModule::Visualization::AddMatch(cv::Point2f pt1, cv::Point2f pt2, double depth, double depthGnd)
+void StereoModule::Visualization::AddMatch(cv::Point2f pt1, cv::Point2f pt2, double depth, double err)
 {
-    double err = std::abs(depth - depthGnd) / depthGnd;
     err = min(err, 1.0);
     depth = min(depth, maxDepth_);
     cv::circle(curMask_, pt1, 3, cv::Scalar(255, 0, 0), -1);

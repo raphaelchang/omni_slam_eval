@@ -79,6 +79,7 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
             int tinx = min((int)(ti - ts_.begin()), (int)(ts_.size() - 1)) - 1;
             regionCount_[{rinx, tinx}]++;
 
+            const data::Feature *obsPrev = landmark.GetObservationByFrameID((*next(frames_.rbegin()))->GetID());
             Vector2d pixelGnd;
             if (frames_.back()->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(frames_.back()->GetInversePose(), landmark.GetGroundTruth())), pixelGnd))
             {
@@ -86,7 +87,6 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
                 pixel << obs->GetKeypoint().pt.x, obs->GetKeypoint().pt.y;
                 double error = (pixel - pixelGnd).norm();
 
-                const data::Feature *obsPrev = landmark.GetObservationByFrameID((*next(frames_.rbegin()))->GetID());
                 visualization_.AddTrack(cv::Point2f(pixelGnd(0), pixelGnd(1)), obsPrev->GetKeypoint().pt, obs->GetKeypoint().pt, error, i);
 
                 double xg = pixelGnd(0) - frames_.back()->GetImage().cols / 2. + 0.5;
@@ -94,6 +94,10 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
                 double rg = sqrt(xg * xg + yg * yg) / imsize;
                 stats_.radialErrors.emplace_back(vector<double>{rg, error});
                 stats_.frameErrors.emplace_back(vector<double>{(double)landmark.GetNumObservations() - 1, (double)i, rg, error});
+            }
+            else if (!frames_.back()->HasPose())
+            {
+                visualization_.AddTrack(obsPrev->GetKeypoint().pt, obs->GetKeypoint().pt, i);
             }
             stats_.trackLengths[i]++;
             numGood++;
@@ -179,6 +183,13 @@ void TrackingModule::Visualization::AddTrack(cv::Point2f gnd, cv::Point2f prev, 
     cv::line(visMask_, prev, cur, color, 1);
     cv::circle(curMask_, cur, 1, color, -1);
     cv::circle(curMask_, gnd, 3, colors_[index % colors_.size()], -1);
+}
+
+void TrackingModule::Visualization::AddTrack(cv::Point2f prev, cv::Point2f cur, int index)
+{
+    cv::Scalar color(255, 0, 0);
+    cv::line(visMask_, prev, cur, color, 1);
+    cv::circle(curMask_, cur, 1, color, -1);
 }
 
 void TrackingModule::Visualization::Draw(cv::Mat &img)

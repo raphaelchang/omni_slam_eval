@@ -22,10 +22,6 @@ void OdometryModule::Update(std::vector<data::Landmark> &landmarks, data::Frame 
 {
     if (landmarks.size() == 0)
     {
-        if (frame.HasPose())
-        {
-            frame.SetEstimatedPose(frame.GetPose());
-        }
         return;
     }
     pnp_->Compute(landmarks, frame);

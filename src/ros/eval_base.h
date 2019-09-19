@@ -66,6 +66,8 @@ private:
     std::string poseTopic_;
     std::map<std::string, double> cameraParams_;
     Matrix<double, 3, 4> stereoPose_;
+
+    bool first_{true};
 };
 
 }
