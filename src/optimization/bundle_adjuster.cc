@@ -110,13 +110,28 @@ bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
                 continue;
             }
             ceres::CostFunction *cost_function = nullptr;
+            const data::Feature *stereoFeat = feature.GetFrame().HasStereoImage() ? landmark.GetStereoObservationByFrameID(feature.GetFrame().GetID()) : nullptr;
             if (feature.GetFrame().GetCameraModel().GetType() == camera::CameraModel<>::kPerspective)
             {
-                cost_function = ReprojectionError<camera::Perspective>::Create(feature);
+                if (stereoFeat != nullptr)
+                {
+                    cost_function = ReprojectionError<camera::Perspective>::Create(feature, *stereoFeat);
+                }
+                else
+                {
+                    cost_function = ReprojectionError<camera::Perspective>::Create(feature);
+                }
             }
             else if (feature.GetFrame().GetCameraModel().GetType() == camera::CameraModel<>::kDoubleSphere)
             {
-                cost_function = ReprojectionError<camera::DoubleSphere>::Create(feature);
+                if (stereoFeat != nullptr)
+                {
+                    cost_function = ReprojectionError<camera::DoubleSphere>::Create(feature, *stereoFeat);
+                }
+                else
+                {
+                    cost_function = ReprojectionError<camera::DoubleSphere>::Create(feature);
+                }
             }
             if (cost_function != nullptr)
             {
@@ -142,7 +157,7 @@ bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
         bool hasEstCameraPoses = false;
         for (const data::Feature &feature : landmark.GetObservations())
         {
-            if (feature.GetFrame().HasEstimatedPose())
+            if (feature.GetFrame().HasEstimatedPose() && feature.GetFrame().IsEstimatedByLandmark(landmark.GetID()))
             {
                 hasEstCameraPoses = true;
             }

@@ -15,7 +15,16 @@ class ReprojectionError
 {
 public:
     ReprojectionError(const data::Feature &feature)
-        : feature_(feature)
+        : feature_(feature),
+        stereoFeature_(feature),
+        hasStereo_(false)
+    {
+    }
+
+    ReprojectionError(const data::Feature &feature, const data::Feature &stereo_feature)
+        : feature_(feature),
+        stereoFeature_(stereo_feature),
+        hasStereo_(true)
     {
     }
 
@@ -32,6 +41,14 @@ public:
         camera.ProjectToImage(camPt, reprojPoint);
         reproj_error[0] = reprojPoint(0) - T(feature_.GetKeypoint().pt.x);
         reproj_error[1] = reprojPoint(1) - T(feature_.GetKeypoint().pt.y);
+        if (hasStereo_ && stereoFeature_.GetFrame().HasStereoImage())
+        {
+            Matrix<T, 2, 1> reprojPoint2;
+            Matrix<T, 3, 4> stereoPose = stereoFeature_.GetFrame().GetStereoPose().cast<T>();
+            camera.ProjectToImage(util::TFUtil::TransformPoint(stereoPose, camPt), reprojPoint2);
+            reproj_error[0] += reprojPoint(0) - T(stereoFeature_.GetKeypoint().pt.x);
+            reproj_error[1] += reprojPoint(1) - T(stereoFeature_.GetKeypoint().pt.y);
+        }
         return true;
     }
 
@@ -40,8 +57,15 @@ public:
         return new ceres::AutoDiffCostFunction<ReprojectionError, 2, 4, 3, 3>(new ReprojectionError<C>(feature));
     }
 
+    static ceres::CostFunction* Create(const data::Feature &feature, const data::Feature &stereo_feature)
+    {
+        return new ceres::AutoDiffCostFunction<ReprojectionError, 2, 4, 3, 3>(new ReprojectionError<C>(feature, stereo_feature));
+    }
+
 private:
     const data::Feature feature_;
+    const data::Feature stereoFeature_;
+    bool hasStereo_;
 };
 
 }
