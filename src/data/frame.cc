@@ -15,7 +15,7 @@ Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, cv::Mat &depth_image, Matrix
     depthImage_(depth_image.clone()),
     pose_(pose),
     invPose_(util::TFUtil::InversePoseMatrix(pose)),
-    stereoPose_(stereo_pose),
+    stereoPose_(util::TFUtil::InversePoseMatrix(stereo_pose)),
     timeSec_(time),
     cameraModel_(camera_model)
 {
@@ -28,7 +28,7 @@ Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, Matrix<double, 3, 4> &stereo
     : id_(lastFrameId_++),
     image_(image.clone()),
     stereoImage_(stereo_image.clone()),
-    stereoPose_(stereo_pose),
+    stereoPose_(util::TFUtil::InversePoseMatrix(stereo_pose)),
     timeSec_(time),
     cameraModel_(camera_model)
 {
@@ -54,7 +54,7 @@ Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, cv::Mat &depth_image, Matrix
     image_(image.clone()),
     stereoImage_(stereo_image.clone()),
     depthImage_(depth_image.clone()),
-    stereoPose_(stereo_pose),
+    stereoPose_(util::TFUtil::InversePoseMatrix(stereo_pose)),
     timeSec_(time),
     cameraModel_(camera_model)
 {
@@ -82,7 +82,7 @@ Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, Matrix<double, 3, 4>  &pose,
     stereoImage_(stereo_image.clone()),
     pose_(pose),
     invPose_(util::TFUtil::InversePoseMatrix(pose)),
-    stereoPose_(stereo_pose),
+    stereoPose_(util::TFUtil::InversePoseMatrix(stereo_pose)),
     timeSec_(time),
     cameraModel_(camera_model)
 {

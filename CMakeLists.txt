@@ -4,7 +4,6 @@ project(omni_slam_eval)
 
 set(CMAKE_VERBOSE_MAKEFILE FALSE)
 
-add_definitions("-std=c++17")
 if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
 endif (NOT CMAKE_BUILD_TYPE)
@@ -109,6 +108,16 @@ add_executable(omni_slam_stereo_eval_node
     src/omni_slam_stereo_eval_node.cc
 )
 
+add_executable(omni_slam_slam_eval_node
+    src/ros/slam_eval.cc
+    src/ros/stereo_eval.cc
+    src/ros/odometry_eval.cc
+    src/ros/reconstruction_eval.cc
+    src/ros/tracking_eval.cc
+    src/ros/eval_base.cc
+    src/omni_slam_slam_eval_node.cc
+)
+
 target_link_libraries(omni_slam_tracking_eval_node PUBLIC omni_slam_eval_lib
   ${catkin_LIBRARIES}
   ${OpenCV_LIBS}
@@ -154,12 +163,22 @@ target_link_libraries(omni_slam_stereo_eval_node PUBLIC omni_slam_eval_lib
   ${CERES_LIBRARIES}
 )
 
+target_link_libraries(omni_slam_slam_eval_node PUBLIC omni_slam_eval_lib
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBS}
+  ${HDF5_CXX_LIBRARIES}
+  ${OpenMP_CXX_FLAGS}
+  ${PCL_LIBRARIES}
+  ${CERES_LIBRARIES}
+)
+
 target_compile_options(omni_slam_tracking_eval_node PUBLIC ${OpenMP_CXX_FLAGS})
 target_compile_options(omni_slam_matching_eval_node PUBLIC ${OpenMP_CXX_FLAGS})
 target_compile_options(omni_slam_reconstruction_eval_node PUBLIC ${OpenMP_CXX_FLAGS})
 target_compile_options(omni_slam_odometry_eval_node PUBLIC ${OpenMP_CXX_FLAGS})
 target_compile_options(omni_slam_stereo_eval_node PUBLIC ${OpenMP_CXX_FLAGS})
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -ggdb")
+target_compile_options(omni_slam_slam_eval_node PUBLIC ${OpenMP_CXX_FLAGS})
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -std=c++17")
 
 install(TARGETS omni_slam_tracking_eval_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
@@ -186,6 +205,12 @@ install(TARGETS omni_slam_odometry_eval_node
 )
 
 install(TARGETS omni_slam_stereo_eval_node
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+install(TARGETS omni_slam_slam_eval_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

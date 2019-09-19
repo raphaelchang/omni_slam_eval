@@ -36,11 +36,15 @@ int PNP::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &fram
     {
         if (landmark.IsObservedInFrame(frame.GetID()))
         {
-            if (landmark.HasEstimatedPosition())
+            if (frame.HasStereoImage() && landmark.HasEstimatedPosition() && landmark.GetStereoObservationByFrameID(landmark.GetFirstFrameID()) != nullptr)
             {
                 xs.push_back(landmark.GetEstimatedPosition());
             }
-            else if (landmark.HasGroundTruth())
+            else if (!frame.HasStereoImage() && landmark.HasEstimatedPosition())
+            {
+                xs.push_back(landmark.GetEstimatedPosition());
+            }
+            else if (!frame.HasStereoImage() && landmark.HasGroundTruth())
             {
                 xs.push_back(landmark.GetGroundTruth());
             }

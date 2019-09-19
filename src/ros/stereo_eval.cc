@@ -50,8 +50,10 @@ void StereoEval::GetResultsData(std::map<std::string, std::vector<std::vector<do
 
 void StereoEval::Visualize(cv_bridge::CvImagePtr &base_img, cv_bridge::CvImagePtr &base_stereo_img)
 {
+    cv::Mat orig = base_img->image.clone();
     stereoModule_->Visualize(base_img->image, base_stereo_img->image);
     matchedImagePublisher_.publish(base_img->toImageMsg());
+    base_img->image = orig;
 }
 
 }

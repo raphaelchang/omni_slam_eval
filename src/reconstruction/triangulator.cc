@@ -20,6 +20,10 @@ int Triangulator::Triangulate(std::vector<data::Landmark> &landmarks) const
     for (auto it = landmarks.begin(); it < landmarks.end(); it++)
     {
         data::Landmark &landmark = *it;
+        if (landmark.HasEstimatedPosition() && landmark.GetStereoObservationByFrameID(landmark.GetFirstFrameID()) != nullptr)
+        {
+            continue;
+        }
         Vector3d point;
         if (TriangulateNViews(landmark.GetObservations(), point))
         {

@@ -30,6 +30,9 @@ protected:
 
     std::unique_ptr<module::TrackingModule> trackingModule_;
 
+    bool visualized_{false};
+    bool pubInitialized_{false};
+
 private:
     image_transport::Publisher trackedImagePublisher_;
 };

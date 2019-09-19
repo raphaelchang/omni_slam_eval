@@ -55,11 +55,16 @@ TrackingEval<Stereo>::TrackingEval(const ::ros::NodeHandle &nh, const ::ros::Nod
 template <bool Stereo>
 void TrackingEval<Stereo>::InitPublishers()
 {
-    EvalBase<Stereo>::InitPublishers();
+    if (!pubInitialized_)
+    {
+        EvalBase<Stereo>::InitPublishers();
 
-    string outputTopic;
-    this->nhp_.param("tracked_image_topic", outputTopic, string("/omni_slam/tracked"));
-    trackedImagePublisher_ = this->imageTransport_.advertise(outputTopic, 2);
+        string outputTopic;
+        this->nhp_.param("tracked_image_topic", outputTopic, string("/omni_slam/tracked"));
+        trackedImagePublisher_ = this->imageTransport_.advertise(outputTopic, 2);
+
+        pubInitialized_ = true;
+    }
 }
 
 template <bool Stereo>
@@ -88,8 +93,14 @@ void TrackingEval<Stereo>::GetResultsData(std::map<std::string, std::vector<std:
 template <bool Stereo>
 void TrackingEval<Stereo>::Visualize(cv_bridge::CvImagePtr &base_img)
 {
-    trackingModule_->Visualize(base_img->image);
-    trackedImagePublisher_.publish(base_img->toImageMsg());
+    if (!visualized_)
+    {
+        cv::Mat orig = base_img->image.clone();
+        trackingModule_->Visualize(base_img->image);
+        trackedImagePublisher_.publish(base_img->toImageMsg());
+        base_img->image = orig;
+        visualized_ = true;
+    }
 }
 
 template class TrackingEval<true>;

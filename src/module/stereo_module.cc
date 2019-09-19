@@ -1,5 +1,7 @@
 #include "stereo_module.h"
 
+#include <algorithm>
+
 using namespace std;
 
 namespace omni_slam
@@ -33,7 +35,8 @@ void StereoModule::Update(data::Frame &frame, std::vector<data::Landmark> &landm
         {
             Matrix<double, 3, 4> framePose = frame.HasEstimatedPose() ? frame.GetEstimatedPose() : frame.GetPose();
             double depth = (landmark.GetEstimatedPosition() - framePose.block<3, 1>(0, 3)).norm();
-            visualization_.AddMatch(feat1->GetKeypoint().pt, feat2->GetKeypoint().pt, depth);
+            double depthGnd = (landmark.GetGroundTruth() - frame.GetPose().block<3, 1>(0, 3)).norm();
+            visualization_.AddMatch(feat1->GetKeypoint().pt, feat2->GetKeypoint().pt, depth, depthGnd);
         }
     }
     frameNum_++;
@@ -55,12 +58,15 @@ void StereoModule::Visualization::Init(cv::Size img_size)
     curDepth_ = cv::Mat::zeros(img_size, CV_8UC3);
 }
 
-void StereoModule::Visualization::AddMatch(cv::Point2f pt1, cv::Point2f pt2, double depth)
+void StereoModule::Visualization::AddMatch(cv::Point2f pt1, cv::Point2f pt2, double depth, double depthGnd)
 {
+    double err = std::abs(depth - depthGnd) / depthGnd;
+    err = min(err, 1.0);
+    depth = min(depth, maxDepth_);
     cv::circle(curMask_, pt1, 3, cv::Scalar(255, 0, 0), -1);
     cv::circle(curMask_, pt2 + cv::Point2f(curMask_.cols / 2., 0), 3, cv::Scalar(255, 0, 0), -1);
     cv::line(curMask_, pt1, pt2 + cv::Point2f(curMask_.cols / 2., 0), cv::Scalar(255, 0, 0), 1);
-    cv::circle(curDepth_, pt1, 2, cv::Scalar(depth / maxDepth_ * 255, depth / maxDepth_ * 255, depth / maxDepth_ * 255));
+    cv::circle(curDepth_, pt1, 2, cv::Scalar((depth / maxDepth_ - err) * 255, (depth / maxDepth_ - err) * 255, depth / maxDepth_ * 255));
 }
 
 void StereoModule::Visualization::Draw(cv::Mat &img, const cv::Mat &stereo_img)

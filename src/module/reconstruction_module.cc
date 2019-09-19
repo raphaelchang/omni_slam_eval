@@ -47,7 +47,7 @@ void ReconstructionModule::BundleAdjust(std::vector<data::Landmark> &landmarks)
 {
     bundleAdjuster_->Optimize(landmarks);
 
-    for (int i = 0; i < landmarks.size(); i++)
+    for (int i = 0; i < lastLandmarksSize_; i++)
     {
         if (landmarks[i].HasEstimatedPosition())
         {

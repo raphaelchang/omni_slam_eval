@@ -38,7 +38,7 @@ private:
     {
     public:
         void Init(cv::Size img_size);
-        void AddMatch(cv::Point2f pt1, cv::Point2f pt2, double depth);
+        void AddMatch(cv::Point2f pt1, cv::Point2f pt2, double depth, double depthGnd);
         void Draw(cv::Mat &img, const cv::Mat &stereo_img);
 
     private:
