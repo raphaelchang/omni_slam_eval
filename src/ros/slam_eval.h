@@ -26,6 +26,9 @@ private:
     void GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data);
     void Visualize(cv_bridge::CvImagePtr &base_img);
     void Visualize(cv_bridge::CvImagePtr &base_img, cv_bridge::CvImagePtr &base_stereo_img);
+
+    int baSlidingWindow_;
+    int frameNum_{0};
 };
 
 }

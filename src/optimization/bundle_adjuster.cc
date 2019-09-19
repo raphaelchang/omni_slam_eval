@@ -23,7 +23,7 @@ BundleAdjuster::BundleAdjuster(int max_iterations, double loss_coeff, int num_th
     solverOptions_.logging_type = log ? ceres::PER_MINIMIZER_ITERATION : ceres::SILENT;
 }
 
-bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
+bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks, const std::vector<int> &frame_ids)
 {
     std::vector<double> landmarkEstimates;
     landmarkEstimates.reserve(3 * landmarks.size());
@@ -32,9 +32,32 @@ bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
     ceres::LossFunction *loss_function = new ceres::HuberLoss(lossCoeff_);
     for (const data::Landmark &landmark : landmarks)
     {
+        if (frame_ids.size() > 0)
+        {
+            bool observed = false;
+            for (int id : frame_ids)
+            {
+                if (landmark.IsObservedInFrame(id))
+                {
+                    observed = true;
+                    break;
+                }
+            }
+            if (!observed)
+            {
+                continue;
+            }
+        }
         bool hasEstCameraPoses = false;
         for (const data::Feature &feature : landmark.GetObservations())
         {
+            if (frame_ids.size() > 0)
+            {
+                if (std::find(frame_ids.begin(), frame_ids.end(), feature.GetFrame().GetID()) == frame_ids.end())
+                {
+                    continue;
+                }
+            }
             if (feature.GetFrame().HasEstimatedPose() && feature.GetFrame().IsEstimatedByLandmark(landmark.GetID()))
             {
                 hasEstCameraPoses = true;
@@ -63,6 +86,13 @@ bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
         }
         for (const data::Feature &feature : landmark.GetObservations())
         {
+            if (frame_ids.size() > 0)
+            {
+                if (std::find(frame_ids.begin(), frame_ids.end(), feature.GetFrame().GetID()) == frame_ids.end())
+                {
+                    continue;
+                }
+            }
             if (!feature.GetFrame().HasEstimatedPose() && feature.GetFrame().HasPose())
             {
                 if (!landmark.HasEstimatedPosition())
@@ -154,9 +184,32 @@ bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
     int inx = 0;
     for (data::Landmark &landmark : landmarks)
     {
+        if (frame_ids.size() > 0)
+        {
+            bool observed = false;
+            for (int id : frame_ids)
+            {
+                if (landmark.IsObservedInFrame(id))
+                {
+                    observed = true;
+                    break;
+                }
+            }
+            if (!observed)
+            {
+                continue;
+            }
+        }
         bool hasEstCameraPoses = false;
         for (const data::Feature &feature : landmark.GetObservations())
         {
+            if (frame_ids.size() > 0)
+            {
+                if (std::find(frame_ids.begin(), frame_ids.end(), feature.GetFrame().GetID()) == frame_ids.end())
+                {
+                    continue;
+                }
+            }
             if (feature.GetFrame().HasEstimatedPose() && feature.GetFrame().IsEstimatedByLandmark(landmark.GetID()))
             {
                 hasEstCameraPoses = true;
@@ -181,7 +234,14 @@ bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
         const Matrix<double, 3, 4> pose = util::TFUtil::QuaternionTranslationToPoseMatrix(quat, t);
         frame.second->SetEstimatedInversePose(pose);
     }
+    problem_.reset(new ceres::Problem());
     return true;
+}
+
+bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks)
+{
+    std::vector<int> tmp;
+    Optimize(landmarks, tmp);
 }
 
 }

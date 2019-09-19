@@ -30,6 +30,7 @@ public:
     ReconstructionModule(std::unique_ptr<reconstruction::Triangulator> &&triangulator, std::unique_ptr<optimization::BundleAdjuster> &&bundle_adjuster);
 
     void Update(std::vector<data::Landmark> &landmarks);
+    void BundleAdjust(std::vector<data::Landmark> &landmarks, const std::vector<int> &frame_ids);
     void BundleAdjust(std::vector<data::Landmark> &landmarks);
 
     Stats& GetStats();

@@ -43,9 +43,9 @@ void ReconstructionModule::Update(std::vector<data::Landmark> &landmarks)
     lastLandmarksSize_ = landmarks.size();
 }
 
-void ReconstructionModule::BundleAdjust(std::vector<data::Landmark> &landmarks)
+void ReconstructionModule::BundleAdjust(std::vector<data::Landmark> &landmarks, const std::vector<int> &frame_ids)
 {
-    bundleAdjuster_->Optimize(landmarks);
+    bundleAdjuster_->Optimize(landmarks, frame_ids);
 
     for (int i = 0; i < lastLandmarksSize_; i++)
     {
@@ -54,6 +54,12 @@ void ReconstructionModule::BundleAdjust(std::vector<data::Landmark> &landmarks)
             visualization_.UpdatePoint(i, landmarks[i].GetEstimatedPosition());
         }
     }
+}
+
+void ReconstructionModule::BundleAdjust(std::vector<data::Landmark> &landmarks)
+{
+    std::vector<int> temp;
+    BundleAdjust(landmarks, temp);
 }
 
 ReconstructionModule::Stats& ReconstructionModule::GetStats()

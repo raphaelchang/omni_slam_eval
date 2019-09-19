@@ -39,6 +39,7 @@
             bundle_adjustment_loss_coefficient: 0.05
             bundle_adjustment_logging: true
             bundle_adjustment_num_threads: 20
+            local_bundle_adjustment_window: 0
             stereo_matcher_window_size: 256
             stereo_matcher_num_scales: 5
             stereo_matcher_error_threshold: 20

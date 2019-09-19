@@ -14,6 +14,7 @@ class BundleAdjuster
 public:
     BundleAdjuster(int max_iterations = 500, double loss_coeff = 0.1, int num_threads = 1, bool log = false);
 
+    bool Optimize(std::vector<data::Landmark> &landmarks, const std::vector<int> &frame_ids);
     bool Optimize(std::vector<data::Landmark> &landmarks);
 
 private:
