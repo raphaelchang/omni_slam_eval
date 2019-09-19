@@ -59,6 +59,10 @@ int PNP::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &fram
         }
         i++;
     }
+    if (xs.size() < 4)
+    {
+        return 0;
+    }
     Matrix<double, 3, 4> pose;
     int inliers = RANSAC(xs, ys, yns, frame.GetCameraModel(), pose);
     std::vector<int> indices = GetInlierIndices(xs, yns, pose, frame.GetCameraModel());

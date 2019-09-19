@@ -14,8 +14,9 @@ namespace omni_slam
 namespace ros
 {
 
-OdometryEval::OdometryEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &nh_private)
-    : TrackingEval(nh, nh_private)
+template <bool Stereo>
+OdometryEval<Stereo>::OdometryEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &nh_private)
+    : TrackingEval<Stereo>(nh, nh_private)
 {
     double reprojThresh;
     int iterations;
@@ -24,12 +25,12 @@ OdometryEval::OdometryEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle 
     bool logCeres;
     int numCeresThreads;
 
-    nhp_.param("pnp_inlier_threshold", reprojThresh, 10.);
-    nhp_.param("pnp_iterations", iterations, 1000);
-    nhp_.param("bundle_adjustment_max_iterations", baMaxIter, 500);
-    nhp_.param("bundle_adjustment_loss_coefficient", baLossCoeff, 0.1);
-    nhp_.param("bundle_adjustment_logging", logCeres, false);
-    nhp_.param("bundle_adjustment_num_threads", numCeresThreads, 1);
+    this->nhp_.param("pnp_inlier_threshold", reprojThresh, 10.);
+    this->nhp_.param("pnp_iterations", iterations, 1000);
+    this->nhp_.param("bundle_adjustment_max_iterations", baMaxIter, 500);
+    this->nhp_.param("bundle_adjustment_loss_coefficient", baLossCoeff, 0.1);
+    this->nhp_.param("bundle_adjustment_logging", logCeres, false);
+    this->nhp_.param("bundle_adjustment_num_threads", numCeresThreads, 1);
 
     unique_ptr<odometry::PNP> pnp(new odometry::PNP(iterations, reprojThresh, numCeresThreads));
     unique_ptr<optimization::BundleAdjuster> bundleAdjuster(new optimization::BundleAdjuster(baMaxIter, baLossCoeff, numCeresThreads, logCeres));
@@ -37,55 +38,61 @@ OdometryEval::OdometryEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle 
     odometryModule_.reset(new module::OdometryModule(pnp, bundleAdjuster));
 }
 
-void OdometryEval::InitPublishers()
+template <bool Stereo>
+void OdometryEval<Stereo>::InitPublishers()
 {
-    TrackingEval::InitPublishers();
+    TrackingEval<Stereo>::InitPublishers();
     string outputTopic;
     string outputGndTopic;
     string outputPathTopic;
     string outputPathGndTopic;
-    nhp_.param("odometry_estimate_topic", outputTopic, string("/omni_slam/odometry"));
-    nhp_.param("odometry_ground_truth_topic", outputGndTopic, string("/omni_slam/odometry_truth"));
-    nhp_.param("path_estimate_topic", outputPathTopic, string("/omni_slam/odometry_path"));
-    nhp_.param("path_ground_truth_topic", outputPathGndTopic, string("/omni_slam/odometry_path_truth"));
-    odometryPublisher_ = nh_.advertise<geometry_msgs::PoseStamped>(outputTopic, 2);
-    odometryGndPublisher_ = nh_.advertise<geometry_msgs::PoseStamped>(outputGndTopic, 2);
-    pathPublisher_ = nh_.advertise<nav_msgs::Path>(outputPathTopic, 2);
-    pathGndPublisher_ = nh_.advertise<nav_msgs::Path>(outputPathGndTopic, 2);
+    this->nhp_.param("odometry_estimate_topic", outputTopic, string("/omni_slam/odometry"));
+    this->nhp_.param("odometry_ground_truth_topic", outputGndTopic, string("/omni_slam/odometry_truth"));
+    this->nhp_.param("path_estimate_topic", outputPathTopic, string("/omni_slam/odometry_path"));
+    this->nhp_.param("path_ground_truth_topic", outputPathGndTopic, string("/omni_slam/odometry_path_truth"));
+    odometryPublisher_ = this->nh_.template advertise<geometry_msgs::PoseStamped>(outputTopic, 2);
+    odometryGndPublisher_ = this->nh_.template advertise<geometry_msgs::PoseStamped>(outputGndTopic, 2);
+    pathPublisher_ = this->nh_.template advertise<nav_msgs::Path>(outputPathTopic, 2);
+    pathGndPublisher_ = this->nh_.template advertise<nav_msgs::Path>(outputPathGndTopic, 2);
 }
 
-void OdometryEval::ProcessFrame(unique_ptr<data::Frame> &&frame)
+template <bool Stereo>
+void OdometryEval<Stereo>::ProcessFrame(unique_ptr<data::Frame> &&frame)
 {
-    trackingModule_->Update(frame);
-    odometryModule_->Update(trackingModule_->GetLandmarks(), *trackingModule_->GetFrames().back());
-    trackingModule_->Redetect();
+    this->trackingModule_->Update(frame);
+    odometryModule_->Update(this->trackingModule_->GetLandmarks(), *this->trackingModule_->GetFrames().back());
+    this->trackingModule_->Redetect();
 }
 
-void OdometryEval::Finish()
+template <bool Stereo>
+void OdometryEval<Stereo>::Finish()
 {
     ROS_INFO("Performing bundle adjustment...");
-    odometryModule_->BundleAdjust(trackingModule_->GetLandmarks());
+    odometryModule_->BundleAdjust(this->trackingModule_->GetLandmarks());
     PublishOdometry();
 }
 
-void OdometryEval::GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data)
+template <bool Stereo>
+void OdometryEval<Stereo>::GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data)
 {
     module::OdometryModule::Stats &stats = odometryModule_->GetStats();
 }
 
-void OdometryEval::Visualize(cv_bridge::CvImagePtr &base_img)
+template <bool Stereo>
+void OdometryEval<Stereo>::Visualize(cv_bridge::CvImagePtr &base_img)
 {
-    TrackingEval::Visualize(base_img);
+    TrackingEval<Stereo>::Visualize(base_img);
     PublishOdometry();
 }
 
-void OdometryEval::PublishOdometry()
+template <bool Stereo>
+void OdometryEval<Stereo>::PublishOdometry()
 {
     geometry_msgs::PoseStamped poseMsg;
     poseMsg.header.frame_id = "map";
-    if (trackingModule_->GetFrames().back()->HasEstimatedPose())
+    if (this->trackingModule_->GetFrames().back()->HasEstimatedPose())
     {
-        const Matrix<double, 3, 4> &pose = trackingModule_->GetFrames().back()->GetEstimatedPose();
+        const Matrix<double, 3, 4> &pose = this->trackingModule_->GetFrames().back()->GetEstimatedPose();
         poseMsg.pose.position.x = pose(0, 3);
         poseMsg.pose.position.y = pose(1, 3);
         poseMsg.pose.position.z = pose(2, 3);
@@ -94,10 +101,10 @@ void OdometryEval::PublishOdometry()
         poseMsg.pose.orientation.y = quat.normalized().y();
         poseMsg.pose.orientation.z = quat.normalized().z();
         poseMsg.pose.orientation.w = quat.normalized().w();
-        poseMsg.header.stamp = ::ros::Time(trackingModule_->GetFrames().back()->GetTime());
+        poseMsg.header.stamp = ::ros::Time(this->trackingModule_->GetFrames().back()->GetTime());
         odometryPublisher_.publish(poseMsg);
     }
-    const Matrix<double, 3, 4> &poseGnd = trackingModule_->GetFrames().back()->GetPose();
+    const Matrix<double, 3, 4> &poseGnd = this->trackingModule_->GetFrames().back()->GetPose();
     poseMsg.pose.position.x = poseGnd(0, 3);
     poseMsg.pose.position.y = poseGnd(1, 3);
     poseMsg.pose.position.z = poseGnd(2, 3);
@@ -106,7 +113,7 @@ void OdometryEval::PublishOdometry()
     poseMsg.pose.orientation.y = quatGnd.normalized().y();
     poseMsg.pose.orientation.z = quatGnd.normalized().z();
     poseMsg.pose.orientation.w = quatGnd.normalized().w();
-    poseMsg.header.stamp = ::ros::Time(trackingModule_->GetFrames().back()->GetTime());
+    poseMsg.header.stamp = ::ros::Time(this->trackingModule_->GetFrames().back()->GetTime());
     odometryGndPublisher_.publish(poseMsg);
 
     nav_msgs::Path path;
@@ -115,7 +122,7 @@ void OdometryEval::PublishOdometry()
     nav_msgs::Path pathGnd;
     pathGnd.header.stamp = ::ros::Time::now();
     pathGnd.header.frame_id = "map";
-    for (const std::unique_ptr<data::Frame> &frame : trackingModule_->GetFrames())
+    for (const std::unique_ptr<data::Frame> &frame : this->trackingModule_->GetFrames())
     {
         if (frame->HasEstimatedPose())
         {
@@ -153,6 +160,9 @@ void OdometryEval::PublishOdometry()
     pathPublisher_.publish(path);
     pathGndPublisher_.publish(pathGnd);
 }
+
+template class OdometryEval<true>;
+template class OdometryEval<false>;
 
 }
 }

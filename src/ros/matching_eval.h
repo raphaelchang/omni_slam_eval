@@ -14,7 +14,7 @@ namespace omni_slam
 namespace ros
 {
 
-class MatchingEval : public EvalBase
+class MatchingEval : public EvalBase<>
 {
 public:
     MatchingEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &nh_private);

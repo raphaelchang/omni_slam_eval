@@ -21,7 +21,7 @@ void Landmark::AddObservation(Feature obs, bool compute_gnd)
             groundTruth_ = obs.GetWorldPoint();
             hasGroundTruth_ = true;
         }
-        if (obs.HasEstimatedWorldPoint())
+        if (!obs.GetFrame().HasStereoImage() && obs.HasEstimatedWorldPoint())
         {
             posEstimate_ = obs.GetEstimatedWorldPoint();
             estFrameIds_.insert(obs.GetFrame().GetID());
@@ -36,6 +36,16 @@ void Landmark::AddObservation(Feature obs, bool compute_gnd)
     obs_.push_back(obs);
 }
 
+void Landmark::AddStereoObservation(Feature obs)
+{
+    if (idToStereoIndex_.find(obs.GetFrame().GetID()) != idToStereoIndex_.end())
+    {
+        return;
+    }
+    idToStereoIndex_[obs.GetFrame().GetID()] = stereoObs_.size();
+    stereoObs_.push_back(obs);
+}
+
 const std::vector<Feature>& Landmark::GetObservations() const
 {
     return obs_;
@@ -44,6 +54,11 @@ const std::vector<Feature>& Landmark::GetObservations() const
 std::vector<Feature>& Landmark::GetObservations()
 {
     return obs_;
+}
+
+const std::vector<Feature>& Landmark::GetStereoObservations() const
+{
+    return stereoObs_;
 }
 
 bool Landmark::IsObservedInFrame(const int frame_id) const
@@ -79,6 +94,15 @@ const Feature* Landmark::GetObservationByFrameID(const int frame_id) const
         return nullptr;
     }
     return &obs_[idToIndex_.at(frame_id)];
+}
+
+const Feature* Landmark::GetStereoObservationByFrameID(const int frame_id) const
+{
+    if (idToStereoIndex_.find(frame_id) == idToStereoIndex_.end())
+    {
+        return nullptr;
+    }
+    return &stereoObs_[idToStereoIndex_.at(frame_id)];
 }
 
 void Landmark::SetEstimatedPosition(const Vector3d &pos, const std::vector<int> &frame_ids)

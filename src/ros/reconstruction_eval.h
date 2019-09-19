@@ -12,23 +12,25 @@ namespace omni_slam
 namespace ros
 {
 
-class ReconstructionEval : public TrackingEval
+template <bool Stereo = false>
+class ReconstructionEval : public virtual TrackingEval<Stereo>
 {
 public:
     ReconstructionEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &nh_private);
     ReconstructionEval() : ReconstructionEval(::ros::NodeHandle(), ::ros::NodeHandle("~")) {}
 
-private:
-    void InitPublishers();
+protected:
+    virtual void InitPublishers();
 
-    void ProcessFrame(std::unique_ptr<data::Frame> &&frame);
-    void Finish();
-    void GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data);
-    void Visualize(cv_bridge::CvImagePtr &base_img);
-
-    ::ros::Publisher pointCloudPublisher_;
+    virtual void ProcessFrame(std::unique_ptr<data::Frame> &&frame);
+    virtual void Finish();
+    virtual void GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data);
+    virtual void Visualize(cv_bridge::CvImagePtr &base_img);
 
     std::unique_ptr<module::ReconstructionModule> reconstructionModule_;
+
+private:
+    ::ros::Publisher pointCloudPublisher_;
 };
 
 }

@@ -15,7 +15,8 @@ namespace omni_slam
 namespace ros
 {
 
-EvalBase::EvalBase(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &nh_private)
+template <bool Stereo>
+EvalBase<Stereo>::EvalBase(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &nh_private)
     : nh_(nh), nhp_(nh_private), imageTransport_(nh)
 {
     std::string cameraModel;
@@ -24,6 +25,19 @@ EvalBase::EvalBase(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &nh_priv
     nhp_.param("image_topic", imageTopic_, std::string("/camera/image_raw"));
     nhp_.param("depth_image_topic", depthImageTopic_, std::string("/depth_camera/image_raw"));
     nhp_.param("pose_topic", poseTopic_, std::string("/pose"));
+    if (Stereo)
+    {
+        nhp_.param("stereo_image_topic", stereoImageTopic_, std::string("/camera2/image_raw"));
+        std::vector<double> stereoT;
+        stereoT.reserve(3);
+        std::vector<double> stereoR;
+        stereoR.reserve(4);
+        nhp_.getParam("stereo_tf_t", stereoT);
+        nhp_.getParam("stereo_tf_r", stereoR);
+        Quaterniond q(stereoR[3], stereoR[0], stereoR[1], stereoR[2]);
+        Vector3d t(stereoT[0], stereoT[1], stereoT[2]);
+        stereoPose_ = util::TFUtil::QuaternionTranslationToPoseMatrix(q, t);
+    }
 
     if (cameraModel == "double_sphere")
     {
@@ -39,20 +53,34 @@ EvalBase::EvalBase(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &nh_priv
     }
 }
 
-void EvalBase::InitSubscribers()
+template <>
+void EvalBase<false>::InitSubscribers()
 {
     imageSubscriber_.subscribe(imageTransport_, imageTopic_, 3);
     depthImageSubscriber_.subscribe(imageTransport_, depthImageTopic_, 3);
     poseSubscriber_.subscribe(nh_, poseTopic_, 10);
-    sync_.reset(new message_filters::Synchronizer<message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image, geometry_msgs::PoseStamped>>(message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image, geometry_msgs::PoseStamped>(5), imageSubscriber_, depthImageSubscriber_, poseSubscriber_));
-    sync_->registerCallback(boost::bind(&EvalBase::FrameCallback, this, _1, _2, _3));
+    sync_.reset(new message_filters::Synchronizer<MessageFilter>(MessageFilter(5), imageSubscriber_, depthImageSubscriber_, poseSubscriber_));
+    sync_->registerCallback(boost::bind(&EvalBase<false>::FrameCallback, this, _1, _2, _3));
 }
 
-void EvalBase::InitPublishers()
+template <>
+void EvalBase<true>::InitSubscribers()
+{
+    imageSubscriber_.subscribe(imageTransport_, imageTopic_, 3);
+    stereoImageSubscriber_.subscribe(imageTransport_, stereoImageTopic_, 3);
+    depthImageSubscriber_.subscribe(imageTransport_, depthImageTopic_, 3);
+    poseSubscriber_.subscribe(nh_, poseTopic_, 10);
+    sync_.reset(new message_filters::Synchronizer<MessageFilter>(MessageFilter(5), imageSubscriber_, stereoImageSubscriber_, depthImageSubscriber_, poseSubscriber_));
+    sync_->registerCallback(boost::bind(&EvalBase<true>::FrameCallback, this, _1, _2, _3, _4));
+}
+
+template <bool Stereo>
+void EvalBase<Stereo>::InitPublishers()
 {
 }
 
-void EvalBase::FrameCallback(const sensor_msgs::ImageConstPtr &image, const sensor_msgs::ImageConstPtr &depth_image, const geometry_msgs::PoseStamped::ConstPtr &pose)
+template <bool Stereo>
+void EvalBase<Stereo>::FrameCallback(const sensor_msgs::ImageConstPtr &image, const sensor_msgs::ImageConstPtr &depth_image, const geometry_msgs::PoseStamped::ConstPtr &pose)
 {
     cv_bridge::CvImagePtr cvImage;
     cv_bridge::CvImagePtr cvDepthImage;
@@ -75,30 +103,74 @@ void EvalBase::FrameCallback(const sensor_msgs::ImageConstPtr &image, const sens
     cv::Mat depthFloatImg;
     cvDepthImage->image.convertTo(depthFloatImg, CV_64FC1, 500. / 65535);
 
-    ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, depthFloatImg, posemat, pose->header.stamp.toSec(), *cameraModel_)));
+    ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, posemat, depthFloatImg, pose->header.stamp.toSec(), *cameraModel_)));
 
     Visualize(cvImage);
 }
 
-void EvalBase::Finish()
+template <bool Stereo>
+void EvalBase<Stereo>::FrameCallback(const sensor_msgs::ImageConstPtr &image, const sensor_msgs::ImageConstPtr &stereo_image, const sensor_msgs::ImageConstPtr &depth_image, const geometry_msgs::PoseStamped::ConstPtr &pose)
+{
+    cv_bridge::CvImagePtr cvImage;
+    cv_bridge::CvImagePtr cvStereoImage;
+    cv_bridge::CvImagePtr cvDepthImage;
+    try
+    {
+        cvImage = cv_bridge::toCvCopy(image, sensor_msgs::image_encodings::BGR8);
+        cvStereoImage = cv_bridge::toCvCopy(stereo_image, sensor_msgs::image_encodings::BGR8);
+        cvDepthImage = cv_bridge::toCvCopy(depth_image, sensor_msgs::image_encodings::TYPE_16UC1);
+    }
+    catch (cv_bridge::Exception &e)
+    {
+        ROS_ERROR("cv_bridge exception: %s", e.what());
+        return;
+    }
+
+    Quaterniond q(pose->pose.orientation.w, pose->pose.orientation.x, pose->pose.orientation.y, pose->pose.orientation.z);
+    Vector3d t(pose->pose.position.x, pose->pose.position.y, pose->pose.position.z);
+    Matrix<double, 3, 4> posemat = util::TFUtil::QuaternionTranslationToPoseMatrix(q, t);
+    cv::Mat monoImg;
+    cv::cvtColor(cvImage->image, monoImg, CV_BGR2GRAY);
+    cv::Mat monoImg2;
+    cv::cvtColor(cvStereoImage->image, monoImg2, CV_BGR2GRAY);
+    cv::Mat depthFloatImg;
+    cvDepthImage->image.convertTo(depthFloatImg, CV_64FC1, 500. / 65535);
+
+    ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, monoImg2, depthFloatImg, posemat, stereoPose_, pose->header.stamp.toSec(), *cameraModel_)));
+
+    Visualize(cvImage, cvStereoImage);
+}
+
+template <bool Stereo>
+void EvalBase<Stereo>::Finish()
 {
 }
 
-bool EvalBase::GetAttributes(std::map<std::string, std::string> &attributes)
+template <bool Stereo>
+bool EvalBase<Stereo>::GetAttributes(std::map<std::string, std::string> &attributes)
 {
     return false;
 }
 
-bool EvalBase::GetAttributes(std::map<std::string, double> &attributes)
+template <bool Stereo>
+bool EvalBase<Stereo>::GetAttributes(std::map<std::string, double> &attributes)
 {
     return false;
 }
 
-void EvalBase::Visualize(cv_bridge::CvImagePtr &base_img)
+template <bool Stereo>
+void EvalBase<Stereo>::Visualize(cv_bridge::CvImagePtr &base_img)
 {
 }
 
-void EvalBase::Run()
+template <bool Stereo>
+void EvalBase<Stereo>::Visualize(cv_bridge::CvImagePtr &base_img, cv_bridge::CvImagePtr &base_stereo_img)
+{
+    Visualize(base_img);
+}
+
+template <bool Stereo>
+void EvalBase<Stereo>::Run()
 {
     std::string bagFile;
     std::string resultsFile;
@@ -128,6 +200,7 @@ void EvalBase::Run()
         rosbag::Bag bag;
         bag.open(bagFile);
         sensor_msgs::ImageConstPtr imageMsg = nullptr;
+        sensor_msgs::ImageConstPtr stereoMsg = nullptr;
         sensor_msgs::ImageConstPtr depthMsg = nullptr;
         geometry_msgs::PoseStamped::ConstPtr poseMsg = nullptr;
         int runNext = 0;
@@ -145,20 +218,32 @@ void EvalBase::Run()
                 depthMsg = m.instantiate<sensor_msgs::Image>();
                 runNext++;
             }
+            else if (Stereo && m.getTopic() == stereoImageTopic_)
+            {
+                stereoMsg = m.instantiate<sensor_msgs::Image>();
+                runNext++;
+            }
             else if (m.getTopic() == imageTopic_)
             {
                 imageMsg = m.instantiate<sensor_msgs::Image>();
                 runNext++;
             }
-            else if (runNext >= 2 && m.getTopic() == poseTopic_)
+            else if (runNext >= (Stereo ? 3 : 2) && m.getTopic() == poseTopic_)
             {
                 poseMsg = m.instantiate<geometry_msgs::PoseStamped>();
                 runNext = 0;
                 if (skip == 0)
                 {
-                    if (imageMsg != nullptr && depthMsg != nullptr && poseMsg != nullptr)
+                    if (imageMsg != nullptr && depthMsg != nullptr && poseMsg != nullptr && (!Stereo || stereoMsg != nullptr))
                     {
-                        FrameCallback(imageMsg, depthMsg, poseMsg);
+                        if (Stereo)
+                        {
+                            FrameCallback(imageMsg, stereoMsg, depthMsg, poseMsg);
+                        }
+                        else
+                        {
+                            FrameCallback(imageMsg, depthMsg, poseMsg);
+                        }
                     }
                 }
                 skip++;
@@ -197,6 +282,9 @@ void EvalBase::Run()
         }
     }
 }
+
+template class EvalBase<true>;
+template class EvalBase<false>;
 
 }
 }

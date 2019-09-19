@@ -33,6 +33,10 @@ int FivePoint::Compute(const std::vector<data::Landmark> &landmarks, const data:
         }
         i++;
     }
+    if (x1.size() < 5)
+    {
+        return 0;
+    }
     int inliers = RANSAC(x1, x2, E);
     std::vector<int> indices = GetInlierIndices(x1, x2, E);
     inlier_indices.clear();

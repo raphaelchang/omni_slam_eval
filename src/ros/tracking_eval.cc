@@ -11,8 +11,9 @@ namespace omni_slam
 namespace ros
 {
 
-TrackingEval::TrackingEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &nh_private)
-    : EvalBase(nh, nh_private)
+template <bool Stereo>
+TrackingEval<Stereo>::TrackingEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &nh_private)
+    : EvalBase<Stereo>(nh, nh_private)
 {
     string detectorType;
     int trackerWindowSize;
@@ -24,15 +25,15 @@ TrackingEval::TrackingEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle 
     map<string, double> detectorParams;
     int minFeaturesRegion;
 
-    nhp_.param("detector_type", detectorType, string("GFTT"));
-    nhp_.param("tracker_window_size", trackerWindowSize, 128);
-    nhp_.param("tracker_num_scales", trackerNumScales, 4);
-    nhp_.param("tracker_checker_epipolar_threshold", fivePointThreshold, 0.01745240643);
-    nhp_.param("tracker_checker_iterations", fivePointRansacIterations, 1000);
-    nhp_.param("tracker_delta_pixel_error_threshold", trackerDeltaPixelErrorThresh, 5.0);
-    nhp_.param("tracker_error_threshold", trackerErrorThresh, 20.);
-    nhp_.param("min_features_per_region", minFeaturesRegion, 5);
-    nhp_.getParam("detector_parameters", detectorParams);
+    this->nhp_.param("detector_type", detectorType, string("GFTT"));
+    this->nhp_.param("tracker_window_size", trackerWindowSize, 128);
+    this->nhp_.param("tracker_num_scales", trackerNumScales, 4);
+    this->nhp_.param("tracker_checker_epipolar_threshold", fivePointThreshold, 0.01745240643);
+    this->nhp_.param("tracker_checker_iterations", fivePointRansacIterations, 1000);
+    this->nhp_.param("tracker_delta_pixel_error_threshold", trackerDeltaPixelErrorThresh, 5.0);
+    this->nhp_.param("tracker_error_threshold", trackerErrorThresh, 20.);
+    this->nhp_.param("min_features_per_region", minFeaturesRegion, 5);
+    this->nhp_.getParam("detector_parameters", detectorParams);
 
     unique_ptr<feature::Detector> detector;
     if (feature::Detector::IsDetectorTypeValid(detectorType))
@@ -51,22 +52,25 @@ TrackingEval::TrackingEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle 
     trackingModule_.reset(new module::TrackingModule(detector, tracker, checker, minFeaturesRegion));
 }
 
-void TrackingEval::InitPublishers()
+template <bool Stereo>
+void TrackingEval<Stereo>::InitPublishers()
 {
-    EvalBase::InitPublishers();
+    EvalBase<Stereo>::InitPublishers();
 
     string outputTopic;
-    nhp_.param("tracked_image_topic", outputTopic, string("/omni_slam/tracked"));
-    trackedImagePublisher_ = imageTransport_.advertise(outputTopic, 2);
+    this->nhp_.param("tracked_image_topic", outputTopic, string("/omni_slam/tracked"));
+    trackedImagePublisher_ = this->imageTransport_.advertise(outputTopic, 2);
 }
 
-void TrackingEval::ProcessFrame(unique_ptr<data::Frame> &&frame)
+template <bool Stereo>
+void TrackingEval<Stereo>::ProcessFrame(unique_ptr<data::Frame> &&frame)
 {
     trackingModule_->Update(frame);
     trackingModule_->Redetect();
 }
 
-void TrackingEval::GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data)
+template <bool Stereo>
+void TrackingEval<Stereo>::GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data)
 {
     module::TrackingModule::Stats &stats = trackingModule_->GetStats();
     data["failures"] = {stats.failureRadDists};
@@ -81,11 +85,15 @@ void TrackingEval::GetResultsData(std::map<std::string, std::vector<std::vector<
     data["track_lengths"] = {vector<double>(stats.trackLengths.begin(), stats.trackLengths.end())};
 }
 
-void TrackingEval::Visualize(cv_bridge::CvImagePtr &base_img)
+template <bool Stereo>
+void TrackingEval<Stereo>::Visualize(cv_bridge::CvImagePtr &base_img)
 {
     trackingModule_->Visualize(base_img->image);
     trackedImagePublisher_.publish(base_img->toImageMsg());
 }
+
+template class TrackingEval<true>;
+template class TrackingEval<false>;
 
 }
 }

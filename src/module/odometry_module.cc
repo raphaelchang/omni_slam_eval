@@ -20,6 +20,14 @@ OdometryModule::OdometryModule(std::unique_ptr<odometry::PNP> &&pnp, std::unique
 
 void OdometryModule::Update(std::vector<data::Landmark> &landmarks, data::Frame &frame)
 {
+    if (landmarks.size() == 0)
+    {
+        if (frame.HasPose())
+        {
+            frame.SetEstimatedPose(frame.GetPose());
+        }
+        return;
+    }
     pnp_->Compute(landmarks, frame);
 }
 

@@ -31,14 +31,6 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
     int imsize = max(frames_.back()->GetImage().rows, frames_.back()->GetImage().cols);
     if (frameNum_ == 0)
     {
-        #pragma omp parallel for collapse(2)
-        for (int i = 0; i < rs_.size() - 1; i++)
-        {
-            for (int j = 0; j < ts_.size() - 1; j++)
-            {
-                detector_->DetectInRadialRegion(*frames_.back(), landmarks_, rs_[i] * imsize, rs_[i+1] * imsize, ts_[j], ts_[j+1]);
-            }
-        }
         tracker_->Init(*frames_.back());
 
         visualization_.Init(frames_.back()->GetImage().size(), landmarks_.size());
@@ -48,22 +40,24 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
     }
 
     vector<double> trackErrors;
-    std::vector<data::Landmark> landmarksTemp(landmarks_);
-    tracker_->Track(landmarksTemp, *frames_.back(), trackErrors);
-
     if (fivePointChecker_)
     {
-        Matrix3d E;
-        std::vector<int> inlierIndices;
-        fivePointChecker_->Compute(landmarksTemp, **next(frames_.rbegin()), *frames_.back(), E, inlierIndices);
-        for (int inx : inlierIndices)
+        std::vector<data::Landmark> landmarksTemp(landmarks_);
+        int tracks = tracker_->Track(landmarksTemp, *frames_.back(), trackErrors);
+        if (tracks > 0)
         {
-            landmarks_[inx].AddObservation(*landmarksTemp[inx].GetObservationByFrameID(frames_.back()->GetID()));
+            Matrix3d E;
+            std::vector<int> inlierIndices;
+            fivePointChecker_->Compute(landmarksTemp, **next(frames_.rbegin()), *frames_.back(), E, inlierIndices);
+            for (int inx : inlierIndices)
+            {
+                landmarks_[inx].AddObservation(*landmarksTemp[inx].GetObservationByFrameID(frames_.back()->GetID()));
+            }
         }
     }
     else
     {
-        landmarks_ = std::move(landmarksTemp);
+        tracker_->Track(landmarks_, *frames_.back(), trackErrors);
     }
 
     int i = 0;

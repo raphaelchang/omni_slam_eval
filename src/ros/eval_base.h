@@ -21,6 +21,7 @@ namespace omni_slam
 namespace ros
 {
 
+template <bool Stereo = false>
 class EvalBase
 {
 public:
@@ -42,6 +43,7 @@ protected:
 
 private:
     void FrameCallback(const sensor_msgs::ImageConstPtr &image, const sensor_msgs::ImageConstPtr &depth_image, const geometry_msgs::PoseStamped::ConstPtr &pose);
+    void FrameCallback(const sensor_msgs::ImageConstPtr &image, const sensor_msgs::ImageConstPtr &stereo_image, const sensor_msgs::ImageConstPtr &depth_image, const geometry_msgs::PoseStamped::ConstPtr &pose);
 
     virtual void ProcessFrame(std::unique_ptr<data::Frame> &&frame) = 0;
     virtual void GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data) = 0;
@@ -49,16 +51,21 @@ private:
     virtual bool GetAttributes(std::map<std::string, std::string> &attributes);
     virtual bool GetAttributes(std::map<std::string, double> &attributes);
     virtual void Visualize(cv_bridge::CvImagePtr &base_img);
+    virtual void Visualize(cv_bridge::CvImagePtr &base_img, cv_bridge::CvImagePtr &base_stereo_img);
 
     image_transport::SubscriberFilter imageSubscriber_;
     image_transport::SubscriberFilter depthImageSubscriber_;
+    image_transport::SubscriberFilter stereoImageSubscriber_;
     message_filters::Subscriber<geometry_msgs::PoseStamped> poseSubscriber_;
-    std::unique_ptr<message_filters::Synchronizer<message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image, geometry_msgs::PoseStamped>>> sync_;
+    typedef typename std::conditional<Stereo, message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::Image, geometry_msgs::PoseStamped>, message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image, geometry_msgs::PoseStamped>>::type MessageFilter;
+    std::unique_ptr<message_filters::Synchronizer<MessageFilter>> sync_;
 
     std::string imageTopic_;
+    std::string stereoImageTopic_;
     std::string depthImageTopic_;
     std::string poseTopic_;
     std::map<std::string, double> cameraParams_;
+    Matrix<double, 3, 4> stereoPose_;
 };
 
 }

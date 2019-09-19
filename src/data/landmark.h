@@ -18,12 +18,15 @@ class Landmark
 public:
     Landmark();
     void AddObservation(Feature obs, bool compute_gnd = true);
+    void AddStereoObservation(Feature obs);
     const std::vector<Feature>& GetObservations() const;
     std::vector<Feature>& GetObservations();
+    const std::vector<Feature>& GetStereoObservations() const;
     bool IsObservedInFrame(const int frame_id) const;
     const int GetFirstFrameID() const;
     const int GetNumObservations() const;
     const Feature* GetObservationByFrameID(const int frame_id) const;
+    const Feature* GetStereoObservationByFrameID(const int frame_id) const;
     void SetEstimatedPosition(const Vector3d &pos, const std::vector<int> &frame_ids);
     void SetEstimatedPosition(const Vector3d &pos);
 
@@ -37,8 +40,10 @@ public:
 private:
     const int id_;
     std::vector<Feature> obs_;
+    std::vector<Feature> stereoObs_;
     std::unordered_set<int> estFrameIds_;
     std::map<int, int> idToIndex_;
+    std::map<int, int> idToStereoIndex_;
     Vector3d groundTruth_;
     Vector3d posEstimate_;
     bool hasGroundTruth_{false};

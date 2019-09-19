@@ -11,7 +11,7 @@ namespace ros
 {
 
 MatchingEval::MatchingEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &nh_private)
-    : EvalBase(nh, nh_private)
+    : EvalBase<>(nh, nh_private)
 {
     map<string, double> detectorParams;
     map<string, double> descriptorParams;
@@ -48,7 +48,7 @@ MatchingEval::MatchingEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle 
 
 void MatchingEval::InitPublishers()
 {
-    EvalBase::InitPublishers();
+    EvalBase<>::InitPublishers();
 
     string outputTopic;
     nhp_.param("matched_image_topic", outputTopic, string("/omni_slam/matched"));

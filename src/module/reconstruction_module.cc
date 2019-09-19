@@ -20,6 +20,11 @@ ReconstructionModule::ReconstructionModule(std::unique_ptr<reconstruction::Trian
 
 void ReconstructionModule::Update(std::vector<data::Landmark> &landmarks)
 {
+    if (landmarks.size() == 0)
+    {
+        return;
+    }
+
     triangulator_->Triangulate(landmarks);
 
     visualization_.Reserve(landmarks.size());

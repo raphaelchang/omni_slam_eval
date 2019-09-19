@@ -30,22 +30,22 @@ int Tracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_fram
     }
     bool prevCompressed = prevFrame_->IsCompressed();
     bool curCompressed = cur_frame.IsCompressed();
-    int prev_id = prevFrame_->GetID();
-    std::vector<cv::Point2f> points_to_track;
-    std::vector<cv::KeyPoint> orig_kpt;
-    std::vector<int> orig_inx;
+    int prevId = prevFrame_->GetID();
+    std::vector<cv::Point2f> pointsToTrack;
+    std::vector<cv::KeyPoint> origKpt;
+    std::vector<int> origInx;
     for (int i = 0; i < landmarks.size(); i++)
     {
         data::Landmark &landmark = landmarks[i];
-        const data::Feature *feat = landmark.GetObservationByFrameID(prev_id);
+        const data::Feature *feat = landmark.GetObservationByFrameID(prevId);
         if (feat != nullptr)
         {
-            points_to_track.push_back(feat->GetKeypoint().pt);
-            orig_kpt.push_back(feat->GetKeypoint());
-            orig_inx.push_back(i);
+            pointsToTrack.push_back(feat->GetKeypoint().pt);
+            origKpt.push_back(feat->GetKeypoint());
+            origInx.push_back(i);
         }
     }
-    if (points_to_track.size() == 0)
+    if (pointsToTrack.size() == 0)
     {
         prevFrame_ = &cur_frame;
         return 0;
@@ -53,30 +53,30 @@ int Tracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_fram
     std::vector<cv::Point2f> results;
     std::vector<unsigned char> status;
     std::vector<float> err;
-    cv::calcOpticalFlowPyrLK(prevFrame_->GetImage(), cur_frame.GetImage(), points_to_track, results, status, err, windowSize_, numScales_, termCrit_, 0);
+    cv::calcOpticalFlowPyrLK(prevFrame_->GetImage(), cur_frame.GetImage(), pointsToTrack, results, status, err, windowSize_, numScales_, termCrit_, 0);
     errors.clear();
     int numGood = 0;
     for (int i = 0; i < results.size(); i++)
     {
-        data::Landmark &landmark = landmarks[orig_inx[i]];
+        data::Landmark &landmark = landmarks[origInx[i]];
         if (deltaPixErrThresh_ > 0)
         {
             if (landmark.HasGroundTruth() && cur_frame.HasPose())
             {
-                Vector2d pixel_gnd;
-                Vector2d pixel_gnd_prev;
-                if (!cur_frame.GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(cur_frame.GetInversePose(), landmark.GetGroundTruth())), pixel_gnd) || !prevFrame_->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(prevFrame_->GetInversePose(), landmark.GetGroundTruth())), pixel_gnd_prev))
+                Vector2d pixelGnd;
+                Vector2d pixelGndPrev;
+                if (!cur_frame.GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(cur_frame.GetInversePose(), landmark.GetGroundTruth())), pixelGnd) || !prevFrame_->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(prevFrame_->GetInversePose(), landmark.GetGroundTruth())), pixelGndPrev))
                 {
                     continue;
                 }
                 else
                 {
-                    Vector2d pixel_cur;
-                    pixel_cur << results[i].x, results[i].y;
-                    Vector2d pixel_prev;
-                    pixel_prev << points_to_track[i].x, points_to_track[i].y;
-                    double cur_error = (pixel_cur - pixel_gnd).norm();
-                    double prev_error = (pixel_prev - pixel_gnd_prev).norm();
+                    Vector2d pixelCur;
+                    pixelCur << results[i].x, results[i].y;
+                    Vector2d pixelPrev;
+                    pixelPrev << pointsToTrack[i].x, pointsToTrack[i].y;
+                    double cur_error = (pixelCur - pixelGnd).norm();
+                    double prev_error = (pixelPrev - pixelGndPrev).norm();
                     if (cur_error - prev_error > deltaPixErrThresh_)
                     {
                         continue;
@@ -86,7 +86,7 @@ int Tracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_fram
         }
         if (status[i] == 1 && err[i] <= errThresh_)
         {
-            cv::KeyPoint kpt(results[i], orig_kpt[i].size);
+            cv::KeyPoint kpt(results[i], origKpt[i].size);
             data::Feature feat(cur_frame, kpt);
             landmark.AddObservation(feat);
             errors.push_back(err[i]);

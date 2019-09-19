@@ -14,7 +14,8 @@ namespace omni_slam
 namespace ros
 {
 
-class TrackingEval : public EvalBase
+template <bool Stereo = false>
+class TrackingEval : public virtual EvalBase<Stereo>
 {
 public:
     TrackingEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &nh_private);
