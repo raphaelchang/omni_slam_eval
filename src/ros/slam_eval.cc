@@ -18,6 +18,7 @@ SLAMEval::SLAMEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &nh_priv
     : OdometryEval<true>(nh, nh_private), ReconstructionEval<true>(nh, nh_private), StereoEval(nh, nh_private)
 {
     this->nhp_.param("local_bundle_adjustment_window", baSlidingWindow_, 0);
+    this->nhp_.param("local_bundle_adjustment_interval", baSlidingInterval_, 0);
 }
 
 void SLAMEval::InitPublishers()
@@ -32,7 +33,7 @@ void SLAMEval::ProcessFrame(unique_ptr<data::Frame> &&frame)
     trackingModule_->Update(frame);
     odometryModule_->Update(trackingModule_->GetLandmarks(), *trackingModule_->GetFrames().back());
     reconstructionModule_->Update(trackingModule_->GetLandmarks());
-    if (baSlidingWindow_ > 0 && (frameNum_ + 1) % baSlidingWindow_ == 0)
+    if (baSlidingWindow_ > 0 && baSlidingInterval_ > 0 && (frameNum_ + 1) % baSlidingInterval_ == 0)
     {
         std::vector<int> frameIds;
         frameIds.reserve(baSlidingWindow_);

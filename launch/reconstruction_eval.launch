@@ -25,6 +25,7 @@
             tracker_delta_pixel_error_threshold: 0.0
             tracker_error_threshold: 20.0
             min_features_per_region: 10
+            max_features_per_region: 5000
             max_reprojection_error: 5.0
             min_triangulation_angle: 3.0
             bundle_adjustment_max_iterations: 1000

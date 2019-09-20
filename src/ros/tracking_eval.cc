@@ -24,6 +24,7 @@ TrackingEval<Stereo>::TrackingEval(const ::ros::NodeHandle &nh, const ::ros::Nod
     double trackerErrorThresh;
     map<string, double> detectorParams;
     int minFeaturesRegion;
+    int maxFeaturesRegion;
 
     this->nhp_.param("detector_type", detectorType, string("GFTT"));
     this->nhp_.param("tracker_window_size", trackerWindowSize, 128);
@@ -33,6 +34,7 @@ TrackingEval<Stereo>::TrackingEval(const ::ros::NodeHandle &nh, const ::ros::Nod
     this->nhp_.param("tracker_delta_pixel_error_threshold", trackerDeltaPixelErrorThresh, 5.0);
     this->nhp_.param("tracker_error_threshold", trackerErrorThresh, 20.);
     this->nhp_.param("min_features_per_region", minFeaturesRegion, 5);
+    this->nhp_.param("max_features_per_region", maxFeaturesRegion, 5000);
     this->nhp_.getParam("detector_parameters", detectorParams);
 
     unique_ptr<feature::Detector> detector;
@@ -49,7 +51,7 @@ TrackingEval<Stereo>::TrackingEval(const ::ros::NodeHandle &nh, const ::ros::Nod
 
     unique_ptr<odometry::FivePoint> checker(new odometry::FivePoint(fivePointRansacIterations, fivePointThreshold));
 
-    trackingModule_.reset(new module::TrackingModule(detector, tracker, checker, minFeaturesRegion));
+    trackingModule_.reset(new module::TrackingModule(detector, tracker, checker, minFeaturesRegion, maxFeaturesRegion));
 }
 
 template <bool Stereo>

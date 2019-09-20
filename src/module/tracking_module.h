@@ -28,8 +28,8 @@ public:
         std::vector<double> failureRadDists;
     };
 
-    TrackingModule(std::unique_ptr<feature::Detector> &detector, std::unique_ptr<feature::Tracker> &tracker, std::unique_ptr<odometry::FivePoint> &checker, int minFeaturesRegion = 5);
-    TrackingModule(std::unique_ptr<feature::Detector> &&detector, std::unique_ptr<feature::Tracker> &&tracker, std::unique_ptr<odometry::FivePoint> &&checker, int minFeaturesRegion = 5);
+    TrackingModule(std::unique_ptr<feature::Detector> &detector, std::unique_ptr<feature::Tracker> &tracker, std::unique_ptr<odometry::FivePoint> &checker, int minFeaturesRegion = 5, int maxFeaturesRegion = 5000);
+    TrackingModule(std::unique_ptr<feature::Detector> &&detector, std::unique_ptr<feature::Tracker> &&tracker, std::unique_ptr<odometry::FivePoint> &&checker, int minFeaturesRegion = 5, int maxFeaturesRegion = 5000);
 
     void Update(std::unique_ptr<data::Frame> &frame);
     void Redetect();
@@ -57,6 +57,8 @@ private:
         const double trackFade_{0.99};
     };
 
+    void Prune();
+
     std::shared_ptr<feature::Detector> detector_;
     std::shared_ptr<feature::Tracker> tracker_;
     std::shared_ptr<odometry::FivePoint> fivePointChecker_;
@@ -67,7 +69,9 @@ private:
     const std::vector<double> rs_{0, 0.1, 0.2, 0.3, 0.4, 0.49};
     const std::vector<double> ts_{-M_PI, -3 * M_PI / 4, -M_PI / 2, -M_PI / 4, 0, M_PI / 4, M_PI / 2, 3 * M_PI / 4, M_PI};
     int minFeaturesRegion_;
+    int maxFeaturesRegion_;
     std::map<std::pair<int, int>, int> regionCount_;
+    std::map<std::pair<int, int>, std::vector<data::Landmark*>> regionLandmarks_;
 
     Stats stats_;
     Visualization visualization_;

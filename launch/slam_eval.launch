@@ -31,6 +31,7 @@
             tracker_delta_pixel_error_threshold: 0.0
             tracker_error_threshold: 20.0
             min_features_per_region: 100
+            max_features_per_region: 1000
             pnp_inlier_threshold: 3.0
             pnp_iterations: 3000
             max_reprojection_error: 5.0
@@ -40,6 +41,7 @@
             bundle_adjustment_logging: true
             bundle_adjustment_num_threads: 20
             local_bundle_adjustment_window: 0
+            local_bundle_adjustment_interval: 0
             stereo_matcher_window_size: 256
             stereo_matcher_num_scales: 5
             stereo_matcher_error_threshold: 20

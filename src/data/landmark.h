@@ -19,6 +19,7 @@ public:
     Landmark();
     void AddObservation(Feature obs, bool compute_gnd = true);
     void AddStereoObservation(Feature obs);
+    void RemoveLastObservation();
     const std::vector<Feature>& GetObservations() const;
     std::vector<Feature>& GetObservations();
     const std::vector<Feature>& GetStereoObservations() const;

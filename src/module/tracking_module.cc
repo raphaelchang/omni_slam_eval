@@ -11,16 +11,17 @@ namespace omni_slam
 namespace module
 {
 
-TrackingModule::TrackingModule(std::unique_ptr<feature::Detector> &detector, std::unique_ptr<feature::Tracker> &tracker, std::unique_ptr<odometry::FivePoint> &checker, int minFeaturesRegion)
+TrackingModule::TrackingModule(std::unique_ptr<feature::Detector> &detector, std::unique_ptr<feature::Tracker> &tracker, std::unique_ptr<odometry::FivePoint> &checker, int minFeaturesRegion, int maxFeaturesRegion)
     : detector_(std::move(detector)),
     tracker_(std::move(tracker)),
     fivePointChecker_(std::move(checker)),
-    minFeaturesRegion_(minFeaturesRegion)
+    minFeaturesRegion_(minFeaturesRegion),
+    maxFeaturesRegion_(maxFeaturesRegion)
 {
 }
 
-TrackingModule::TrackingModule(std::unique_ptr<feature::Detector> &&detector, std::unique_ptr<feature::Tracker> &&tracker, std::unique_ptr<odometry::FivePoint> &&checker, int minFeaturesRegion)
-    : TrackingModule(detector, tracker, checker, minFeaturesRegion)
+TrackingModule::TrackingModule(std::unique_ptr<feature::Detector> &&detector, std::unique_ptr<feature::Tracker> &&tracker, std::unique_ptr<odometry::FivePoint> &&checker, int minFeaturesRegion, int maxFeaturesRegion)
+    : TrackingModule(detector, tracker, checker, minFeaturesRegion, maxFeaturesRegion)
 {
 }
 
@@ -40,29 +41,26 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
     }
 
     vector<double> trackErrors;
-    if (fivePointChecker_)
+    int tracks = tracker_->Track(landmarks_, *frames_.back(), trackErrors);
+    if (fivePointChecker_ && tracks > 0)
     {
-        std::vector<data::Landmark> landmarksTemp(landmarks_);
-        int tracks = tracker_->Track(landmarksTemp, *frames_.back(), trackErrors);
-        if (tracks > 0)
+        Matrix3d E;
+        std::vector<int> inlierIndices;
+        fivePointChecker_->Compute(landmarks_, **next(frames_.rbegin()), *frames_.back(), E, inlierIndices);
+        std::unordered_set<int> inlierSet(inlierIndices.begin(), inlierIndices.end());
+        for (int i = 0; i < landmarks_.size(); i++)
         {
-            Matrix3d E;
-            std::vector<int> inlierIndices;
-            fivePointChecker_->Compute(landmarksTemp, **next(frames_.rbegin()), *frames_.back(), E, inlierIndices);
-            for (int inx : inlierIndices)
+            if (landmarks_[i].IsObservedInFrame(frames_.back()->GetID()) && inlierSet.find(i) == inlierSet.end())
             {
-                landmarks_[inx].AddObservation(*landmarksTemp[inx].GetObservationByFrameID(frames_.back()->GetID()));
+                landmarks_[i].RemoveLastObservation();
             }
         }
-    }
-    else
-    {
-        tracker_->Track(landmarks_, *frames_.back(), trackErrors);
     }
 
     int i = 0;
     int numGood = 0;
     regionCount_.clear();
+    regionLandmarks_.clear();
     stats_.trackLengths.resize(landmarks_.size(), 0);
     for (data::Landmark& landmark : landmarks_)
     {
@@ -78,6 +76,7 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
             int rinx = min((int)(ri - rs_.begin()), (int)(rs_.size() - 1)) - 1;
             int tinx = min((int)(ti - ts_.begin()), (int)(ts_.size() - 1)) - 1;
             regionCount_[{rinx, tinx}]++;
+            regionLandmarks_[{rinx, tinx}].push_back(&landmark);
 
             const data::Feature *obsPrev = landmark.GetObservationByFrameID((*next(frames_.rbegin()))->GetID());
             Vector2d pixelGnd;
@@ -124,6 +123,8 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
 
     stats_.frameTrackCounts.emplace_back(vector<int>{frameNum_, numGood});
 
+    Prune();
+
     (*next(frames_.rbegin()))->CompressImages();
 
     frameNum_++;
@@ -140,6 +141,29 @@ void TrackingModule::Redetect()
             if (regionCount_.find({i, j}) == regionCount_.end() || regionCount_.at({i, j}) < minFeaturesRegion_)
             {
                 detector_->DetectInRadialRegion(*frames_.back(), landmarks_, rs_[i] * imsize, rs_[i+1] * imsize, ts_[j], ts_[j+1]);
+            }
+        }
+    }
+}
+
+void TrackingModule::Prune()
+{
+    #pragma omp parallel for collapse(2)
+    for (int i = 0; i < rs_.size() - 1; i++)
+    {
+        for (int j = 0; j < ts_.size() - 1; j++)
+        {
+            if (regionCount_.find({i, j}) != regionCount_.end() && regionCount_.at({i, j}) > maxFeaturesRegion_)
+            {
+                sort(regionLandmarks_.at({i, j}).begin(), regionLandmarks_.at({i, j}).end(),
+                        [](const data::Landmark *a, const data::Landmark *b) -> bool
+                        {
+                            return a->GetNumObservations() > b->GetNumObservations();
+                        });
+                for (int c = 0; c < regionCount_.at({i, j}) - maxFeaturesRegion_; c++)
+                {
+                    regionLandmarks_.at({i, j})[c]->RemoveLastObservation();
+                }
             }
         }
     }

@@ -28,6 +28,7 @@ private:
     void Visualize(cv_bridge::CvImagePtr &base_img, cv_bridge::CvImagePtr &base_stereo_img);
 
     int baSlidingWindow_;
+    int baSlidingInterval_;
     int frameNum_{0};
 };
 
