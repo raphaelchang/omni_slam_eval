@@ -32,11 +32,12 @@ protected:
     std::unique_ptr<module::OdometryModule> odometryModule_;
 
 private:
-
     ::ros::Publisher odometryPublisher_;
     ::ros::Publisher odometryGndPublisher_;
     ::ros::Publisher pathPublisher_;
     ::ros::Publisher pathGndPublisher_;
+
+    std::string cameraFrame_;
 };
 
 }

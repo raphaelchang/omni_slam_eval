@@ -16,7 +16,7 @@ template <typename T>
 inline Matrix<T, 3, 1> CameraFrameToWorldFrame(Matrix<T, 3, 1> cameraFramePt)
 {
     Matrix<T, 3, 1> worldFramePt;
-    worldFramePt << cameraFramePt(0), cameraFramePt(2), -cameraFramePt(1);
+    worldFramePt << cameraFramePt(2), -cameraFramePt(0), -cameraFramePt(1);
     return worldFramePt;
 }
 
@@ -24,7 +24,7 @@ template <typename T>
 inline Matrix<T, 3, 1> WorldFrameToCameraFrame(Matrix<T, 3, 1> worldFramePt)
 {
     Matrix<T, 3, 1> cameraFramePt;
-    cameraFramePt << worldFramePt(0), -worldFramePt(2), worldFramePt(1);
+    cameraFramePt << -worldFramePt(1), -worldFramePt(2), worldFramePt(0);
     return cameraFramePt;
 }
 
@@ -80,20 +80,20 @@ template <typename T>
 inline Matrix<T, 3, 3> GetEssentialMatrixFromPoses(Matrix<T, 3, 4> pose1, Matrix<T, 3, 4> pose2)
 {
     Matrix<T, 3, 4> rel = GetRelativeTransform(pose1, pose2);
-    Vector3d t = rel.template block<3, 1>(0, 3);
+    Vector3d t = -GetRotationFromPoseMatrix(rel).transpose() * rel.template block<3, 1>(0, 3);
     Matrix3d tx;
     tx << 0, -t(2), t(1),
        t(2), 0, -t(0),
        -t(1), t(0), 0;
-    return tx * GetRotationFromPoseMatrix(rel);
+    return GetRotationFromPoseMatrix(rel) * tx;
 }
 
 template <typename T>
 inline Matrix<T, 3, 4> IdentityPoseMatrix()
 {
     Matrix<T, 3, 4> I;
-    I.template block<3, 3>(0, 0) = Matrix3d::Identity();
-    I.template block<3, 1>(0, 3) = Vector3d::Zero();
+    I.template block<3, 3>(0, 0) = Matrix<T, 3, 3>::Identity();
+    I.template block<3, 1>(0, 3) = Matrix<T, 3, 1>::Zero();
     return I;
 }
 

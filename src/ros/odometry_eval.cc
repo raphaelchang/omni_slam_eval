@@ -25,6 +25,7 @@ OdometryEval<Stereo>::OdometryEval(const ::ros::NodeHandle &nh, const ::ros::Nod
     bool logCeres;
     int numCeresThreads;
 
+    this->nhp_.param("output_frame", cameraFrame_, std::string("map"));
     this->nhp_.param("pnp_inlier_threshold", reprojThresh, 10.);
     this->nhp_.param("pnp_iterations", iterations, 1000);
     this->nhp_.param("bundle_adjustment_max_iterations", baMaxIter, 500);
@@ -91,7 +92,7 @@ template <bool Stereo>
 void OdometryEval<Stereo>::PublishOdometry()
 {
     geometry_msgs::PoseStamped poseMsg;
-    poseMsg.header.frame_id = "map";
+    poseMsg.header.frame_id = cameraFrame_;
     if (this->trackingModule_->GetFrames().back()->HasEstimatedPose() || this->trackingModule_->GetFrames().size() == 1)
     {
         const Matrix<double, 3, 4> &pose = (this->trackingModule_->GetFrames().size() == 1 && !this->trackingModule_->GetFrames().back()->HasEstimatedPose()) ? this->trackingModule_->GetFrames().back()->GetPose() : this->trackingModule_->GetFrames().back()->GetEstimatedPose();
@@ -107,6 +108,7 @@ void OdometryEval<Stereo>::PublishOdometry()
         odometryPublisher_.publish(poseMsg);
     }
     const Matrix<double, 3, 4> &poseGnd = this->trackingModule_->GetFrames().back()->GetPose();
+    poseMsg.header.frame_id = cameraFrame_;
     poseMsg.pose.position.x = poseGnd(0, 3);
     poseMsg.pose.position.y = poseGnd(1, 3);
     poseMsg.pose.position.z = poseGnd(2, 3);
@@ -120,10 +122,10 @@ void OdometryEval<Stereo>::PublishOdometry()
 
     nav_msgs::Path path;
     path.header.stamp = ::ros::Time::now();
-    path.header.frame_id = "map";
+    path.header.frame_id = cameraFrame_;
     nav_msgs::Path pathGnd;
     pathGnd.header.stamp = ::ros::Time::now();
-    pathGnd.header.frame_id = "map";
+    pathGnd.header.frame_id = cameraFrame_;
     bool first = true;
     for (const std::unique_ptr<data::Frame> &frame : this->trackingModule_->GetFrames())
     {
@@ -131,7 +133,7 @@ void OdometryEval<Stereo>::PublishOdometry()
         {
             geometry_msgs::PoseStamped poseMsg;
             poseMsg.header.stamp = ::ros::Time(frame->GetTime());
-            poseMsg.header.frame_id = "map";
+            poseMsg.header.frame_id = cameraFrame_;
             const Matrix<double, 3, 4> &pose = (first && !frame->HasEstimatedPose()) ? frame->GetPose() : frame->GetEstimatedPose();
             poseMsg.pose.position.x = pose(0, 3);
             poseMsg.pose.position.y = pose(1, 3);
@@ -147,7 +149,7 @@ void OdometryEval<Stereo>::PublishOdometry()
         {
             geometry_msgs::PoseStamped poseMsg;
             poseMsg.header.stamp = ::ros::Time(frame->GetTime());
-            poseMsg.header.frame_id = "map";
+            poseMsg.header.frame_id = cameraFrame_;
             const Matrix<double, 3, 4> &pose = frame->GetPose();
             poseMsg.pose.position.x = pose(0, 3);
             poseMsg.pose.position.y = pose(1, 3);

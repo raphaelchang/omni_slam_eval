@@ -25,6 +25,7 @@ ReconstructionEval<Stereo>::ReconstructionEval(const ::ros::NodeHandle &nh, cons
     bool logCeres;
     int numCeresThreads;
 
+    this->nhp_.param("output_frame", cameraFrame_, std::string("map"));
     this->nhp_.param("max_reprojection_error", maxReprojError, 0.0);
     this->nhp_.param("min_triangulation_angle", minTriAngle, 1.0);
     this->nhp_.param("bundle_adjustment_max_iterations", baMaxIter, 500);
@@ -68,7 +69,7 @@ void ReconstructionEval<Stereo>::Finish()
     reconstructionModule_->Visualize(noarr, cloud);
     sensor_msgs::PointCloud2 msg;
     pcl::toROSMsg(cloud, msg);
-    msg.header.frame_id = "map";
+    msg.header.frame_id = cameraFrame_;
     msg.header.stamp = ::ros::Time::now();
     pointCloudPublisher_.publish(msg);
 }
@@ -86,7 +87,7 @@ void ReconstructionEval<Stereo>::Visualize(cv_bridge::CvImagePtr &base_img)
     reconstructionModule_->Visualize(base_img->image, cloud);
     sensor_msgs::PointCloud2 msg;
     pcl::toROSMsg(cloud, msg);
-    msg.header.frame_id = "map";
+    msg.header.frame_id = cameraFrame_;
     msg.header.stamp = ::ros::Time::now();
     pointCloudPublisher_.publish(msg);
     TrackingEval<Stereo>::Visualize(base_img);

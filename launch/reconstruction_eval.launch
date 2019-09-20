@@ -12,6 +12,7 @@
         <param name="pose_topic" value="/unity_ros/Sphere/TrueState/pose" />
         <param name="tracked_image_topic" value="/omni_slam/tracked" />
         <param name="point_cloud_topic" value="/omni_slam/reconstructed" />
+        <param name="output_frame" value="map" />
         <param name="rate" value="$(arg rate)" />
         <rosparam subst_value="true">
             camera_model: '$(arg camera_model)'

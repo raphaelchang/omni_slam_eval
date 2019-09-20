@@ -45,7 +45,7 @@ int StereoMatcher::Match(data::Frame &frame, std::vector<data::Landmark> &landma
         if (feat != nullptr)
         {
             pointsToMatch.push_back(feat->GetKeypoint());
-            bearings1.push_back(feat->GetBearing().normalized());
+            bearings1.push_back(util::TFUtil::WorldFrameToCameraFrame(feat->GetBearing().normalized()));
             origInx.push_back(i);
         }
     }
@@ -67,7 +67,7 @@ int StereoMatcher::Match(data::Frame &frame, std::vector<data::Landmark> &landma
         int inx = *it;
         Vector3d &bearing1 = bearings1[inx];
         data::Feature feat(frame, matchedPoints[inx]);
-        Vector3d bearing2 = feat.GetBearing().normalized();
+        Vector3d bearing2 = util::TFUtil::WorldFrameToCameraFrame(feat.GetBearing().normalized());
 
         RowVector3d epiplane1 = bearing2.transpose() * E;
         epiplane1.normalize();
@@ -77,7 +77,7 @@ int StereoMatcher::Match(data::Frame &frame, std::vector<data::Landmark> &landma
         double epiErr2 = std::abs(bearing2.transpose() * epiplane2);
         if (epiErr1 < epipolarThresh_ && epiErr2 < epipolarThresh_)
         {
-            landmarks[origInx[inx]].SetEstimatedPosition(util::TFUtil::TransformPoint(framePose, TriangulateDLT(bearing1, bearing2, I, frame.GetStereoPose())), std::vector<int>({frame.GetID()}));
+            landmarks[origInx[inx]].SetEstimatedPosition(util::TFUtil::TransformPoint(framePose, util::TFUtil::CameraFrameToWorldFrame(TriangulateDLT(bearing1, bearing2, I, frame.GetStereoPose()))), std::vector<int>({frame.GetID()}));
             landmarks[origInx[inx]].AddStereoObservation(feat);
             good++;
         }

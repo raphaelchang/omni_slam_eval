@@ -31,6 +31,8 @@ protected:
 
 private:
     ::ros::Publisher pointCloudPublisher_;
+
+    std::string cameraFrame_;
 };
 
 }
