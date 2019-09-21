@@ -55,7 +55,7 @@ void SLAMEval::ProcessFrame(unique_ptr<data::Frame> &&frame)
 void SLAMEval::Finish()
 {
     ReconstructionEval<true>::Finish();
-    PublishOdometry();
+    PublishOdometry(true);
 }
 
 void SLAMEval::GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data)

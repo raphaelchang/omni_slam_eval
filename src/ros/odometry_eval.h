@@ -27,14 +27,16 @@ protected:
     virtual void GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data);
     virtual void Visualize(cv_bridge::CvImagePtr &base_img);
 
-    void PublishOdometry();
+    void PublishOdometry(bool optimized = false);
 
     std::unique_ptr<module::OdometryModule> odometryModule_;
 
 private:
     ::ros::Publisher odometryPublisher_;
+    ::ros::Publisher odometryOptPublisher_;
     ::ros::Publisher odometryGndPublisher_;
     ::ros::Publisher pathPublisher_;
+    ::ros::Publisher pathOptPublisher_;
     ::ros::Publisher pathGndPublisher_;
 
     std::string cameraFrame_;

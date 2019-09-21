@@ -12,8 +12,10 @@
         <param name="pose_topic" value="/unity_ros/Sphere/TrueState/pose" />
         <param name="tracked_image_topic" value="/omni_slam/tracked" />
         <param name="odometry_estimate_topic" value="/omni_slam/odometry" />
+        <param name="odometry_optimized_topic" value="/omni_slam/odometry_optimized" />
         <param name="odometry_ground_truth_topic" value="/omni_slam/odometry_truth" />
         <param name="path_estimate_topic" value="/omni_slam/odometry_path" />
+        <param name="path_optimized_topic" value="/omni_slam/odometry_path_optimized" />
         <param name="path_ground_truth_topic" value="/omni_slam/odometry_path_truth" />
         <param name="output_frame" value="map" />
         <param name="rate" value="$(arg rate)" />
