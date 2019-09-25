@@ -89,7 +89,10 @@ void EvalBase<Stereo>::FrameCallback(const sensor_msgs::ImageConstPtr &image, co
     try
     {
         cvImage = cv_bridge::toCvCopy(image, sensor_msgs::image_encodings::BGR8);
-        cvDepthImage = cv_bridge::toCvCopy(depth_image, sensor_msgs::image_encodings::TYPE_16UC1);
+        if (depth_image != nullptr)
+        {
+            cvDepthImage = cv_bridge::toCvCopy(depth_image, sensor_msgs::image_encodings::TYPE_16UC1);
+        }
     }
     catch (cv_bridge::Exception &e)
     {
@@ -103,10 +106,20 @@ void EvalBase<Stereo>::FrameCallback(const sensor_msgs::ImageConstPtr &image, co
     cv::Mat monoImg;
     cv::cvtColor(cvImage->image, monoImg, CV_BGR2GRAY);
     cv::Mat depthFloatImg;
-    cvDepthImage->image.convertTo(depthFloatImg, CV_64FC1, 500. / 65535);
+    if (depth_image != nullptr)
+    {
+        cvDepthImage->image.convertTo(depthFloatImg, CV_64FC1, 500. / 65535);
+    }
 
 #ifdef USE_GROUND_TRUTH
-    ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, posemat, depthFloatImg, pose->header.stamp.toSec(), *cameraModel_)));
+    if (depth_image != nullptr)
+    {
+        ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, posemat, depthFloatImg, pose->header.stamp.toSec(), *cameraModel_)));
+    }
+    else
+    {
+        ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, posemat, pose->header.stamp.toSec(), *cameraModel_)));
+    }
 #else
     if (first_)
     {
@@ -131,7 +144,10 @@ void EvalBase<Stereo>::FrameCallback(const sensor_msgs::ImageConstPtr &image, co
     {
         cvImage = cv_bridge::toCvCopy(image, sensor_msgs::image_encodings::BGR8);
         cvStereoImage = cv_bridge::toCvCopy(stereo_image, sensor_msgs::image_encodings::BGR8);
-        cvDepthImage = cv_bridge::toCvCopy(depth_image, sensor_msgs::image_encodings::TYPE_16UC1);
+        if (depth_image != nullptr)
+        {
+            cvDepthImage = cv_bridge::toCvCopy(depth_image, sensor_msgs::image_encodings::TYPE_16UC1);
+        }
     }
     catch (cv_bridge::Exception &e)
     {
@@ -147,10 +163,20 @@ void EvalBase<Stereo>::FrameCallback(const sensor_msgs::ImageConstPtr &image, co
     cv::Mat monoImg2;
     cv::cvtColor(cvStereoImage->image, monoImg2, CV_BGR2GRAY);
     cv::Mat depthFloatImg;
-    cvDepthImage->image.convertTo(depthFloatImg, CV_64FC1, 500. / 65535);
+    if (depth_image != nullptr)
+    {
+        cvDepthImage->image.convertTo(depthFloatImg, CV_64FC1, 500. / 65535);
+    }
 
 #ifdef USE_GROUND_TRUTH
-    ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, monoImg2, depthFloatImg, posemat, stereoPose_, pose->header.stamp.toSec(), *cameraModel_)));
+    if (depth_image != nullptr)
+    {
+        ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, monoImg2, depthFloatImg, posemat, stereoPose_, pose->header.stamp.toSec(), *cameraModel_)));
+    }
+    else
+    {
+        ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, monoImg2, posemat, stereoPose_, pose->header.stamp.toSec(), *cameraModel_)));
+    }
 #else
     if (first_)
     {
@@ -228,7 +254,9 @@ void EvalBase<Stereo>::Run()
         sensor_msgs::ImageConstPtr stereoMsg = nullptr;
         sensor_msgs::ImageConstPtr depthMsg = nullptr;
         geometry_msgs::PoseStamped::ConstPtr poseMsg = nullptr;
+        nav_msgs::Odometry::ConstPtr odomMsg = nullptr;
         int runNext = 0;
+        int numMsgs = depthImageTopic_ == "" ? 1 : 2;
         int skip = 0;
         int finished = true;
         for (rosbag::MessageInstance const m : rosbag::View(bag))
@@ -238,7 +266,7 @@ void EvalBase<Stereo>::Run()
                 finished = false;
                 break;
             }
-            if (m.getTopic() == depthImageTopic_)
+            if (depthImageTopic_ != "" && m.getTopic() == depthImageTopic_)
             {
                 depthMsg = m.instantiate<sensor_msgs::Image>();
                 runNext++;
@@ -253,21 +281,32 @@ void EvalBase<Stereo>::Run()
                 imageMsg = m.instantiate<sensor_msgs::Image>();
                 runNext++;
             }
-            else if (runNext >= (Stereo ? 3 : 2) && m.getTopic() == poseTopic_)
+            else if (runNext >= (Stereo ? numMsgs + 1 : numMsgs) && m.getTopic() == poseTopic_)
             {
                 poseMsg = m.instantiate<geometry_msgs::PoseStamped>();
+                geometry_msgs::PoseStamped::Ptr pose(new geometry_msgs::PoseStamped());
+                if (poseMsg == nullptr)
+                {
+                    odomMsg = m.instantiate<nav_msgs::Odometry>();
+                    pose->pose = odomMsg->pose.pose;
+                    pose->header = odomMsg->header;
+                }
+                else
+                {
+                    *pose = *poseMsg;
+                }
                 runNext = 0;
                 if (skip == 0)
                 {
-                    if (imageMsg != nullptr && depthMsg != nullptr && poseMsg != nullptr && (!Stereo || stereoMsg != nullptr))
+                    if (imageMsg != nullptr && (depthImageTopic_ == "" || depthMsg != nullptr) && (poseMsg != nullptr || odomMsg != nullptr) && (!Stereo || stereoMsg != nullptr))
                     {
                         if (Stereo)
                         {
-                            FrameCallback(imageMsg, stereoMsg, depthMsg, poseMsg);
+                            FrameCallback(imageMsg, stereoMsg, depthMsg, pose);
                         }
                         else
                         {
-                            FrameCallback(imageMsg, depthMsg, poseMsg);
+                            FrameCallback(imageMsg, depthMsg, pose);
                         }
                     }
                 }

@@ -1,0 +1,58 @@
+<launch>
+    <arg name="bag_file" default="" />
+    <arg name="results_file" default="$(arg bag_file).slam.hdf5" />
+    <arg name="camera_model" default="double_sphere" />
+    <arg name="camera_params" default="{fx: 287.405, fy: 287.092, cx: 418.432, cy: 399.257, chi: -0.0000588, alpha: 0.675621}" />
+    <arg name="rate" default="1" />
+    <node pkg="omni_slam_eval" type="omni_slam_slam_eval_node" name="omni_slam_slam_eval_node" required="true" output="screen">
+        <param name="bag_file" value="$(arg bag_file)" />
+        <param name="results_file" value="$(arg results_file)" />
+        <param name="image_topic" value="/camera/fisheye1/image_raw" />
+        <param name="stereo_image_topic" value="/camera/fisheye2/image_raw" />
+        <param name="depth_image_topic" value="" />
+        <param name="pose_topic" value="/camera/odom/sample" />
+        <param name="tracked_image_topic" value="/omni_slam/tracked" />
+        <param name="odometry_estimate_topic" value="/omni_slam/odometry" />
+        <param name="odometry_optimized_topic" value="/omni_slam/odometry_optimized" />
+        <param name="odometry_ground_truth_topic" value="/omni_slam/odometry_truth" />
+        <param name="path_estimate_topic" value="/omni_slam/odometry_path" />
+        <param name="path_optimized_topic" value="/omni_slam/odometry_path_optimized" />
+        <param name="path_ground_truth_topic" value="/omni_slam/odometry_path_truth" />
+        <param name="point_cloud_topic" value="/omni_slam/reconstructed" />
+        <param name="stereo_matched_topic" value="/omni_slam/stereo_matched" />
+        <param name="output_frame" value="map" />
+        <param name="rate" value="$(arg rate)" />
+        <rosparam subst_value="true">
+            camera_model: '$(arg camera_model)'
+            camera_parameters: $(arg camera_params)
+            detector_type: 'GFTT'
+            detector_parameters: {maxCorners: 5000, qualityLevel: 0.001, minDistance: 5, blockSize: 5}
+            tracker_window_size: 128
+            tracker_num_scales: 4
+            tracker_checker_epipolar_threshold: 0.008
+            tracker_checker_iterations: 1000
+            tracker_delta_pixel_error_threshold: 0.0
+            tracker_error_threshold: 20.0
+            min_features_per_region: 100
+            max_features_per_region: 1000
+            pnp_inlier_threshold: 3.0
+            pnp_iterations: 3000
+            max_reprojection_error: 5.0
+            min_triangulation_angle: 3.0
+            bundle_adjustment_max_iterations: 1000
+            bundle_adjustment_loss_coefficient: 0.05
+            bundle_adjustment_logging: true
+            bundle_adjustment_num_threads: 20
+            local_bundle_adjustment_window: 0
+            local_bundle_adjustment_interval: 0
+            stereo_matcher_window_size: 256
+            stereo_matcher_num_scales: 5
+            stereo_matcher_error_threshold: 20
+            stereo_matcher_epipolar_threshold: 0.008
+            stereo_tf_t: [0.06410918, 0.0, 0.0]
+            stereo_tf_r: [0.0, 0.0, 0.0, 1.0]
+        </rosparam>
+    </node>
+</launch>
+
+
