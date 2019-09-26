@@ -122,7 +122,8 @@ public:
         T r2;
         if (alpha_ > 0.5)
         {
-            r2 = std::min(mx * mx, 1. / (2. * alpha_ - 1.));
+            //r2 = std::min(mx * mx, 1. / (2. * alpha_ - 1.));
+            r2 = 1. / (2. * alpha_ - 1.);
         }
         else
         {

@@ -17,8 +17,8 @@ namespace omni_slam
 namespace ros
 {
 
-template <bool Stereo>
-EvalBase<Stereo>::EvalBase(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &nh_private)
+template <>
+EvalBase<false>::EvalBase(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &nh_private)
     : nh_(nh), nhp_(nh_private), imageTransport_(nh)
 {
     std::string cameraModel;
@@ -27,19 +27,6 @@ EvalBase<Stereo>::EvalBase(const ::ros::NodeHandle &nh, const ::ros::NodeHandle 
     nhp_.param("image_topic", imageTopic_, std::string("/camera/image_raw"));
     nhp_.param("depth_image_topic", depthImageTopic_, std::string("/depth_camera/image_raw"));
     nhp_.param("pose_topic", poseTopic_, std::string("/pose"));
-    if (Stereo)
-    {
-        nhp_.param("stereo_image_topic", stereoImageTopic_, std::string("/camera2/image_raw"));
-        std::vector<double> stereoT;
-        stereoT.reserve(3);
-        std::vector<double> stereoR;
-        stereoR.reserve(4);
-        nhp_.getParam("stereo_tf_t", stereoT);
-        nhp_.getParam("stereo_tf_r", stereoR);
-        Quaterniond q(stereoR[3], stereoR[0], stereoR[1], stereoR[2]);
-        Vector3d t(stereoT[0], stereoT[1], stereoT[2]);
-        stereoPose_ = util::TFUtil::QuaternionTranslationToPoseMatrix(q, t);
-    }
 
     if (cameraModel == "double_sphere")
     {
@@ -48,6 +35,45 @@ EvalBase<Stereo>::EvalBase(const ::ros::NodeHandle &nh, const ::ros::NodeHandle 
     else if (cameraModel == "perspective")
     {
         cameraModel_.reset(new camera::Perspective<>(cameraParams_["fx"], cameraParams_["fy"], cameraParams_["cx"], cameraParams_["cy"]));
+    }
+    else
+    {
+        ROS_ERROR("Invalid camera model specified");
+    }
+}
+
+template <>
+EvalBase<true>::EvalBase(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &nh_private)
+    : nh_(nh), nhp_(nh_private), imageTransport_(nh)
+{
+    std::string cameraModel;
+    std::map<std::string, double> stereoCameraParams;
+    nhp_.param("camera_model", cameraModel, std::string("double_sphere"));
+    nhp_.getParam("camera_parameters", cameraParams_);
+    nhp_.getParam("stereo_camera_parameters", stereoCameraParams);
+    nhp_.param("image_topic", imageTopic_, std::string("/camera/image_raw"));
+    nhp_.param("depth_image_topic", depthImageTopic_, std::string("/depth_camera/image_raw"));
+    nhp_.param("pose_topic", poseTopic_, std::string("/pose"));
+    nhp_.param("stereo_image_topic", stereoImageTopic_, std::string("/camera2/image_raw"));
+    std::vector<double> stereoT;
+    stereoT.reserve(3);
+    std::vector<double> stereoR;
+    stereoR.reserve(4);
+    nhp_.getParam("stereo_tf_t", stereoT);
+    nhp_.getParam("stereo_tf_r", stereoR);
+    Quaterniond q(stereoR[3], stereoR[0], stereoR[1], stereoR[2]);
+    Vector3d t(stereoT[0], stereoT[1], stereoT[2]);
+    stereoPose_ = util::TFUtil::QuaternionTranslationToPoseMatrix(q, t);
+
+    if (cameraModel == "double_sphere")
+    {
+        cameraModel_.reset(new camera::DoubleSphere<>(cameraParams_["fx"], cameraParams_["fy"], cameraParams_["cx"], cameraParams_["cy"], cameraParams_["chi"], cameraParams_["alpha"]));
+        stereoCameraModel_.reset(new camera::DoubleSphere<>(stereoCameraParams["fx"], stereoCameraParams["fy"], stereoCameraParams["cx"], stereoCameraParams["cy"], stereoCameraParams["chi"], stereoCameraParams["alpha"]));
+    }
+    else if (cameraModel == "perspective")
+    {
+        cameraModel_.reset(new camera::Perspective<>(cameraParams_["fx"], cameraParams_["fy"], cameraParams_["cx"], cameraParams_["cy"]));
+        stereoCameraModel_.reset(new camera::Perspective<>(stereoCameraParams["fx"], stereoCameraParams["fy"], stereoCameraParams["cx"], stereoCameraParams["cy"]));
     }
     else
     {
@@ -114,7 +140,7 @@ void EvalBase<Stereo>::FrameCallback(const sensor_msgs::ImageConstPtr &image, co
 #ifdef USE_GROUND_TRUTH
     if (depth_image != nullptr)
     {
-        ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, posemat, depthFloatImg, pose->header.stamp.toSec(), *cameraModel_)));
+        ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, depthFloatImg, posemat, pose->header.stamp.toSec(), *cameraModel_)));
     }
     else
     {
@@ -171,21 +197,21 @@ void EvalBase<Stereo>::FrameCallback(const sensor_msgs::ImageConstPtr &image, co
 #ifdef USE_GROUND_TRUTH
     if (depth_image != nullptr)
     {
-        ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, monoImg2, depthFloatImg, posemat, stereoPose_, pose->header.stamp.toSec(), *cameraModel_)));
+        ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, monoImg2, depthFloatImg, posemat, stereoPose_, pose->header.stamp.toSec(), *cameraModel_, *stereoCameraModel_)));
     }
     else
     {
-        ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, monoImg2, posemat, stereoPose_, pose->header.stamp.toSec(), *cameraModel_)));
+        ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, monoImg2, posemat, stereoPose_, pose->header.stamp.toSec(), *cameraModel_, *stereoCameraModel_)));
     }
 #else
     if (first_)
     {
-        ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, monoImg2, posemat, stereoPose_, pose->header.stamp.toSec(), *cameraModel_)));
+        ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, monoImg2, posemat, stereoPose_, pose->header.stamp.toSec(), *cameraModel_, *stereoCameraModel_)));
         first_ = false;
     }
     else
     {
-        ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, monoImg2, stereoPose_, pose->header.stamp.toSec(), *cameraModel_)));
+        ProcessFrame(std::unique_ptr<data::Frame>(new data::Frame(monoImg, monoImg2, stereoPose_, pose->header.stamp.toSec(), *cameraModel_, *stereoCameraModel_)));
     }
 #endif
 
@@ -255,6 +281,7 @@ void EvalBase<Stereo>::Run()
         sensor_msgs::ImageConstPtr depthMsg = nullptr;
         geometry_msgs::PoseStamped::ConstPtr poseMsg = nullptr;
         nav_msgs::Odometry::ConstPtr odomMsg = nullptr;
+        geometry_msgs::TransformStamped::ConstPtr tfMsg = nullptr;
         int runNext = 0;
         int numMsgs = depthImageTopic_ == "" ? 1 : 2;
         int skip = 0;
@@ -288,8 +315,23 @@ void EvalBase<Stereo>::Run()
                 if (poseMsg == nullptr)
                 {
                     odomMsg = m.instantiate<nav_msgs::Odometry>();
-                    pose->pose = odomMsg->pose.pose;
-                    pose->header = odomMsg->header;
+                    if (odomMsg == nullptr)
+                    {
+                        tfMsg = m.instantiate<geometry_msgs::TransformStamped>();
+                        if (tfMsg != nullptr)
+                        {
+                            pose->header = tfMsg->header;
+                            pose->pose.position.x = -tfMsg->transform.translation.y;
+                            pose->pose.position.y = tfMsg->transform.translation.x;
+                            pose->pose.position.z = tfMsg->transform.translation.z;
+                            pose->pose.orientation = tfMsg->transform.rotation;
+                        }
+                    }
+                    else
+                    {
+                        pose->pose = odomMsg->pose.pose;
+                        pose->header = odomMsg->header;
+                    }
                 }
                 else
                 {
@@ -298,7 +340,7 @@ void EvalBase<Stereo>::Run()
                 runNext = 0;
                 if (skip == 0)
                 {
-                    if (imageMsg != nullptr && (depthImageTopic_ == "" || depthMsg != nullptr) && (poseMsg != nullptr || odomMsg != nullptr) && (!Stereo || stereoMsg != nullptr))
+                    if (imageMsg != nullptr && (depthImageTopic_ == "" || depthMsg != nullptr) && (poseMsg != nullptr || odomMsg != nullptr || tfMsg != nullptr) && (!Stereo || stereoMsg != nullptr))
                     {
                         if (Stereo)
                         {

@@ -66,7 +66,7 @@ int StereoMatcher::Match(data::Frame &frame, std::vector<data::Landmark> &landma
     {
         int inx = *it;
         Vector3d &bearing1 = bearings1[inx];
-        data::Feature feat(frame, matchedPoints[inx]);
+        data::Feature feat(frame, matchedPoints[inx], true);
         Vector3d bearing2 = util::TFUtil::WorldFrameToCameraFrame(feat.GetBearing().normalized());
 
         RowVector3d epiplane1 = bearing2.transpose() * E;

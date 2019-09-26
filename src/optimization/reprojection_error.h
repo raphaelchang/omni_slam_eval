@@ -45,7 +45,8 @@ public:
         {
             Matrix<T, 2, 1> reprojPoint2;
             Matrix<T, 3, 4> stereoPose = stereoFeature_.GetFrame().GetStereoPose().cast<T>();
-            camera.ProjectToImage(util::TFUtil::TransformPoint(stereoPose, camPt), reprojPoint2);
+            C<T> stereoCamera(feature_.GetFrame().GetStereoCameraModel());
+            stereoCamera.ProjectToImage(util::TFUtil::TransformPoint(stereoPose, camPt), reprojPoint2);
             reproj_error[0] += reprojPoint(0) - T(stereoFeature_.GetKeypoint().pt.x);
             reproj_error[1] += reprojPoint(1) - T(stereoFeature_.GetKeypoint().pt.y);
         }

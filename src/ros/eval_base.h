@@ -6,6 +6,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Odometry.h>
+#include <geometry_msgs/TransformStamped.h>
 #include <sensor_msgs/Image.h>
 #include <image_transport/subscriber_filter.h>
 #include <message_filters/synchronizer.h>
@@ -40,8 +41,6 @@ protected:
 
     image_transport::ImageTransport imageTransport_;
 
-    std::unique_ptr<camera::CameraModel<>> cameraModel_;
-
 private:
     void FrameCallback(const sensor_msgs::ImageConstPtr &image, const sensor_msgs::ImageConstPtr &depth_image, const geometry_msgs::PoseStamped::ConstPtr &pose);
     void FrameCallback(const sensor_msgs::ImageConstPtr &image, const sensor_msgs::ImageConstPtr &stereo_image, const sensor_msgs::ImageConstPtr &depth_image, const geometry_msgs::PoseStamped::ConstPtr &pose);
@@ -67,6 +66,8 @@ private:
     std::string poseTopic_;
     std::map<std::string, double> cameraParams_;
     Matrix<double, 3, 4> stereoPose_;
+    std::unique_ptr<camera::CameraModel<>> cameraModel_;
+    std::unique_ptr<camera::CameraModel<>> stereoCameraModel_;
 
     bool first_{true};
 };

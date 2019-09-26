@@ -80,21 +80,24 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
 
             const data::Feature *obsPrev = landmark.GetObservationByFrameID((*next(frames_.rbegin()))->GetID());
             Vector2d pixelGnd;
-            if (frames_.back()->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(frames_.back()->GetInversePose(), landmark.GetGroundTruth())), pixelGnd))
+            if (frames_.back()->HasPose() && landmark.HasGroundTruth())
             {
-                Vector2d pixel;
-                pixel << obs->GetKeypoint().pt.x, obs->GetKeypoint().pt.y;
-                double error = (pixel - pixelGnd).norm();
+                if (frames_.back()->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(frames_.back()->GetInversePose(), landmark.GetGroundTruth())), pixelGnd))
+                {
+                    Vector2d pixel;
+                    pixel << obs->GetKeypoint().pt.x, obs->GetKeypoint().pt.y;
+                    double error = (pixel - pixelGnd).norm();
 
-                visualization_.AddTrack(cv::Point2f(pixelGnd(0), pixelGnd(1)), obsPrev->GetKeypoint().pt, obs->GetKeypoint().pt, error, i);
+                    visualization_.AddTrack(cv::Point2f(pixelGnd(0), pixelGnd(1)), obsPrev->GetKeypoint().pt, obs->GetKeypoint().pt, error, i);
 
-                double xg = pixelGnd(0) - frames_.back()->GetImage().cols / 2. + 0.5;
-                double yg = pixelGnd(1) - frames_.back()->GetImage().rows / 2. + 0.5;
-                double rg = sqrt(xg * xg + yg * yg) / imsize;
-                stats_.radialErrors.emplace_back(vector<double>{rg, error});
-                stats_.frameErrors.emplace_back(vector<double>{(double)landmark.GetNumObservations() - 1, (double)i, rg, error});
+                    double xg = pixelGnd(0) - frames_.back()->GetImage().cols / 2. + 0.5;
+                    double yg = pixelGnd(1) - frames_.back()->GetImage().rows / 2. + 0.5;
+                    double rg = sqrt(xg * xg + yg * yg) / imsize;
+                    stats_.radialErrors.emplace_back(vector<double>{rg, error});
+                    stats_.frameErrors.emplace_back(vector<double>{(double)landmark.GetNumObservations() - 1, (double)i, rg, error});
+                }
             }
-            else if (!frames_.back()->HasPose())
+            else
             {
                 visualization_.AddTrack(obsPrev->GetKeypoint().pt, obs->GetKeypoint().pt, i);
             }

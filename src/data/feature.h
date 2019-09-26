@@ -15,8 +15,8 @@ namespace data
 class Feature
 {
 public:
-    Feature(Frame &frame, cv::KeyPoint kpt, cv::Mat descriptor);
-    Feature(Frame &frame, cv::KeyPoint kpt);
+    Feature(Frame &frame, cv::KeyPoint kpt, cv::Mat descriptor, bool stereo = false);
+    Feature(Frame &frame, cv::KeyPoint kpt, bool stereo = false);
 
     const Frame& GetFrame() const;
     const cv::KeyPoint& GetKeypoint() const;
@@ -34,6 +34,7 @@ private:
     cv::Mat descriptor_;
     Vector3d worldPoint_;
     Vector3d worldPointEstimate_;
+    bool stereo_;
 
     bool worldPointCached_{false};
     bool worldPointEstimateCached_{false};

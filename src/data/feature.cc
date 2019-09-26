@@ -7,16 +7,18 @@ namespace omni_slam
 namespace data
 {
 
-Feature::Feature(Frame &frame, cv::KeyPoint kpt, cv::Mat descriptor)
+Feature::Feature(Frame &frame, cv::KeyPoint kpt, cv::Mat descriptor, bool stereo)
     : frame_(frame),
     kpt_(kpt),
-    descriptor_(descriptor)
+    descriptor_(descriptor),
+    stereo_(stereo)
 {
 }
 
-Feature::Feature(Frame &frame, cv::KeyPoint kpt)
+Feature::Feature(Frame &frame, cv::KeyPoint kpt, bool stereo)
     : frame_(frame),
-    kpt_(kpt)
+    kpt_(kpt),
+    stereo_(stereo)
 {
 }
 
@@ -40,7 +42,14 @@ Vector3d Feature::GetBearing() const
     Vector3d cameraFramePt;
     Vector2d pixelPt;
     pixelPt << kpt_.pt.x + 0.5, kpt_.pt.y + 0.5;
-    frame_.GetCameraModel().UnprojectToBearing(pixelPt, cameraFramePt);
+    if (stereo_)
+    {
+        frame_.GetStereoCameraModel().UnprojectToBearing(pixelPt, cameraFramePt);
+    }
+    else
+    {
+        frame_.GetCameraModel().UnprojectToBearing(pixelPt, cameraFramePt);
+    }
     return util::TFUtil::CameraFrameToWorldFrame(cameraFramePt);
 }
 

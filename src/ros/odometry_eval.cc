@@ -53,7 +53,7 @@ void OdometryEval<Stereo>::InitPublishers()
     this->nhp_.param("odometry_optimized_topic", outputOptTopic, string("/omni_slam/odometry_optimized"));
     this->nhp_.param("odometry_ground_truth_topic", outputGndTopic, string("/omni_slam/odometry_truth"));
     this->nhp_.param("path_estimate_topic", outputPathTopic, string("/omni_slam/odometry_path"));
-    this->nhp_.param("path_optimized_topic", outputOptTopic, string("/omni_slam/odometry_path_optimized"));
+    this->nhp_.param("path_optimized_topic", outputPathOptTopic, string("/omni_slam/odometry_path_optimized"));
     this->nhp_.param("path_ground_truth_topic", outputPathGndTopic, string("/omni_slam/odometry_path_truth"));
     odometryPublisher_ = this->nh_.template advertise<geometry_msgs::PoseStamped>(outputTopic, 2);
     odometryOptPublisher_ = this->nh_.template advertise<geometry_msgs::PoseStamped>(outputOptTopic, 2);

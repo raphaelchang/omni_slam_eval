@@ -8,7 +8,7 @@ namespace data
 
 int Frame::lastFrameId_ = 0;
 
-Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, cv::Mat &depth_image, Matrix<double, 3, 4>  &pose, Matrix<double, 3, 4> &stereo_pose, double time, camera::CameraModel<> &camera_model)
+Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, cv::Mat &depth_image, Matrix<double, 3, 4>  &pose, Matrix<double, 3, 4> &stereo_pose, double time, camera::CameraModel<> &camera_model, camera::CameraModel<> &stereo_camera_model)
     : id_(lastFrameId_++),
     image_(image.clone()),
     stereoImage_(stereo_image.clone()),
@@ -17,7 +17,8 @@ Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, cv::Mat &depth_image, Matrix
     invPose_(util::TFUtil::InversePoseMatrix(pose)),
     stereoPose_(util::TFUtil::InversePoseMatrix(stereo_pose)),
     timeSec_(time),
-    cameraModel_(camera_model)
+    cameraModel_(camera_model),
+    stereoCameraModel_(&stereo_camera_model)
 {
     hasPose_ = true;
     hasDepth_ = true;
@@ -25,13 +26,14 @@ Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, cv::Mat &depth_image, Matrix
     poseEstimate_ = invPoseEstimate_ = util::TFUtil::IdentityPoseMatrix<double>();
 }
 
-Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, Matrix<double, 3, 4> &stereo_pose, double time, camera::CameraModel<> &camera_model)
+Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, Matrix<double, 3, 4> &stereo_pose, double time, camera::CameraModel<> &camera_model, camera::CameraModel<> &stereo_camera_model)
     : id_(lastFrameId_++),
     image_(image.clone()),
     stereoImage_(stereo_image.clone()),
     stereoPose_(util::TFUtil::InversePoseMatrix(stereo_pose)),
     timeSec_(time),
-    cameraModel_(camera_model)
+    cameraModel_(camera_model),
+    stereoCameraModel_(&stereo_camera_model)
 {
     hasPose_ = false;
     hasDepth_ = false;
@@ -52,14 +54,15 @@ Frame::Frame(cv::Mat &image, cv::Mat &depth_image, double time, camera::CameraMo
     pose_ = invPose_ = poseEstimate_ = invPoseEstimate_ = util::TFUtil::IdentityPoseMatrix<double>();
 }
 
-Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, cv::Mat &depth_image, Matrix<double, 3, 4> &stereo_pose, double time, camera::CameraModel<> &camera_model)
+Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, cv::Mat &depth_image, Matrix<double, 3, 4> &stereo_pose, double time, camera::CameraModel<> &camera_model, camera::CameraModel<> &stereo_camera_model)
     : id_(lastFrameId_++),
     image_(image.clone()),
     stereoImage_(stereo_image.clone()),
     depthImage_(depth_image.clone()),
     stereoPose_(util::TFUtil::InversePoseMatrix(stereo_pose)),
     timeSec_(time),
-    cameraModel_(camera_model)
+    cameraModel_(camera_model),
+    stereoCameraModel_(&stereo_camera_model)
 {
     hasPose_ = false;
     hasDepth_ = true;
@@ -81,7 +84,7 @@ Frame::Frame(cv::Mat &image, Matrix<double, 3, 4>  &pose, double time, camera::C
     poseEstimate_ = invPoseEstimate_ = util::TFUtil::IdentityPoseMatrix<double>();
 }
 
-Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, Matrix<double, 3, 4>  &pose, Matrix<double, 3, 4> &stereo_pose, double time, camera::CameraModel<> &camera_model)
+Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, Matrix<double, 3, 4>  &pose, Matrix<double, 3, 4> &stereo_pose, double time, camera::CameraModel<> &camera_model, camera::CameraModel<> &stereo_camera_model)
     : id_(lastFrameId_++),
     image_(image.clone()),
     stereoImage_(stereo_image.clone()),
@@ -89,7 +92,8 @@ Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, Matrix<double, 3, 4>  &pose,
     invPose_(util::TFUtil::InversePoseMatrix(pose)),
     stereoPose_(util::TFUtil::InversePoseMatrix(stereo_pose)),
     timeSec_(time),
-    cameraModel_(camera_model)
+    cameraModel_(camera_model),
+    stereoCameraModel_(&stereo_camera_model)
 {
     hasPose_ = true;
     hasDepth_ = false;
@@ -97,7 +101,7 @@ Frame::Frame(cv::Mat &image, cv::Mat &stereo_image, Matrix<double, 3, 4>  &pose,
     poseEstimate_ = invPoseEstimate_ = util::TFUtil::IdentityPoseMatrix<double>();
 }
 
-Frame::Frame(cv::Mat &image, Matrix<double, 3, 4>  &pose, cv::Mat &depth_image, double time, camera::CameraModel<> &camera_model)
+Frame::Frame(cv::Mat &image, cv::Mat &depth_image, Matrix<double, 3, 4>  &pose, double time, camera::CameraModel<> &camera_model)
     : id_(lastFrameId_++),
     image_(image.clone()),
     depthImage_(depth_image.clone()),
@@ -192,6 +196,11 @@ const Matrix<double, 3, 4>& Frame::GetStereoPose() const
 const camera::CameraModel<>& Frame::GetCameraModel() const
 {
     return cameraModel_;
+}
+
+const camera::CameraModel<>& Frame::GetStereoCameraModel() const
+{
+    return *stereoCameraModel_;
 }
 
 const Matrix<double, 3, 4>& Frame::GetEstimatedPose() const

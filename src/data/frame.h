@@ -16,13 +16,13 @@ namespace data
 class Frame
 {
 public:
-    Frame(cv::Mat &image, cv::Mat &stereo_image, cv::Mat &depth_image, Matrix<double, 3, 4>  &pose, Matrix<double, 3, 4> &stereo_pose, double time, camera::CameraModel<> &camera_model);
-    Frame(cv::Mat &image, cv::Mat &stereo_image, Matrix<double, 3, 4> &stereo_pose, double time, camera::CameraModel<> &camera_model);
+    Frame(cv::Mat &image, cv::Mat &stereo_image, cv::Mat &depth_image, Matrix<double, 3, 4>  &pose, Matrix<double, 3, 4> &stereo_pose, double time, camera::CameraModel<> &camera_model, camera::CameraModel<> &stereo_camera_model);
+    Frame(cv::Mat &image, cv::Mat &stereo_image, Matrix<double, 3, 4> &stereo_pose, double time, camera::CameraModel<> &camera_model, camera::CameraModel<> &stereo_camera_model);
     Frame(cv::Mat &image, cv::Mat &depth_image, double time, camera::CameraModel<> &camera_model);
-    Frame(cv::Mat &image, cv::Mat &stereo_image, cv::Mat &depth_image, Matrix<double, 3, 4> &stereo_pose, double time, camera::CameraModel<> &camera_model);
+    Frame(cv::Mat &image, cv::Mat &stereo_image, cv::Mat &depth_image, Matrix<double, 3, 4> &stereo_pose, double time, camera::CameraModel<> &camera_model, camera::CameraModel<> &stereo_camera_model);
     Frame(cv::Mat &image, Matrix<double, 3, 4>  &pose, double time, camera::CameraModel<> &camera_model);
-    Frame(cv::Mat &image, cv::Mat &stereo_image, Matrix<double, 3, 4>  &pose, Matrix<double, 3, 4> &stereo_pose, double time, camera::CameraModel<> &camera_model);
-    Frame(cv::Mat &image, Matrix<double, 3, 4>  &pose, cv::Mat &depth_image, double time, camera::CameraModel<> &camera_model);
+    Frame(cv::Mat &image, cv::Mat &stereo_image, Matrix<double, 3, 4>  &pose, Matrix<double, 3, 4> &stereo_pose, double time, camera::CameraModel<> &camera_model, camera::CameraModel<> &stereo_camera_model);
+    Frame(cv::Mat &image, cv::Mat &depth_image, Matrix<double, 3, 4>  &pose, double time, camera::CameraModel<> &camera_model);
     Frame(cv::Mat &image, double time, camera::CameraModel<> &camera_model);
     Frame(const Frame &other);
 
@@ -33,6 +33,7 @@ public:
     const cv::Mat& GetStereoImage();
     const Matrix<double, 3, 4>& GetStereoPose() const;
     const camera::CameraModel<>& GetCameraModel() const;
+    const camera::CameraModel<>& GetStereoCameraModel() const;
     const Matrix<double, 3, 4>& GetEstimatedPose() const;
     const Matrix<double, 3, 4>& GetEstimatedInversePose() const;
     const int GetID() const;
@@ -72,6 +73,7 @@ private:
     Matrix<double, 3, 4> invPoseEstimate_;
     double timeSec_;
     camera::CameraModel<> &cameraModel_;
+    camera::CameraModel<> *stereoCameraModel_{nullptr};
 
     std::unordered_set<int> estLandmarkIds_;
 
