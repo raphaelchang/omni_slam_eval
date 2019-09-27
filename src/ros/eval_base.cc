@@ -188,6 +188,8 @@ void EvalBase<Stereo>::FrameCallback(const sensor_msgs::ImageConstPtr &image, co
     cv::cvtColor(cvImage->image, monoImg, CV_BGR2GRAY);
     cv::Mat monoImg2;
     cv::cvtColor(cvStereoImage->image, monoImg2, CV_BGR2GRAY);
+    cv::equalizeHist(monoImg, monoImg);
+    cv::equalizeHist(monoImg2, monoImg2);
     cv::Mat depthFloatImg;
     if (depth_image != nullptr)
     {
