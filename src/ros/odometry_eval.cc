@@ -1,6 +1,7 @@
 #include "odometry_eval.h"
 
 #include "odometry/pnp.h"
+#include "odometry/five_point.h"
 #include "optimization/bundle_adjuster.h"
 #include "module/tracking_module.h"
 
@@ -25,6 +26,9 @@ OdometryEval<Stereo>::OdometryEval(const ::ros::NodeHandle &nh, const ::ros::Nod
     bool logCeres;
     int numCeresThreads;
 
+    double fivePointThreshold;
+    int fivePointRansacIterations;
+
     this->nhp_.param("output_frame", cameraFrame_, std::string("map"));
     this->nhp_.param("pnp_inlier_threshold", reprojThresh, 10.);
     this->nhp_.param("pnp_iterations", iterations, 1000);
@@ -33,10 +37,14 @@ OdometryEval<Stereo>::OdometryEval(const ::ros::NodeHandle &nh, const ::ros::Nod
     this->nhp_.param("bundle_adjustment_logging", logCeres, false);
     this->nhp_.param("bundle_adjustment_num_threads", numCeresThreads, 1);
 
-    unique_ptr<odometry::PNP> pnp(new odometry::PNP(iterations, reprojThresh, numCeresThreads));
+    this->nhp_.param("tracker_checker_epipolar_threshold", fivePointThreshold, 0.01745240643);
+    this->nhp_.param("tracker_checker_iterations", fivePointRansacIterations, 1000);
+
+    unique_ptr<odometry::PoseEstimator> poseEstimator(new odometry::PNP(iterations, reprojThresh, numCeresThreads));
+    //unique_ptr<odometry::PoseEstimator> poseEstimator(new odometry::FivePoint(fivePointRansacIterations, fivePointThreshold, numCeresThreads));
     unique_ptr<optimization::BundleAdjuster> bundleAdjuster(new optimization::BundleAdjuster(baMaxIter, baLossCoeff, numCeresThreads, logCeres));
 
-    odometryModule_.reset(new module::OdometryModule(pnp, bundleAdjuster));
+    odometryModule_.reset(new module::OdometryModule(poseEstimator, bundleAdjuster));
 }
 
 template <bool Stereo>
@@ -67,7 +75,7 @@ template <bool Stereo>
 void OdometryEval<Stereo>::ProcessFrame(unique_ptr<data::Frame> &&frame)
 {
     this->trackingModule_->Update(frame);
-    odometryModule_->Update(this->trackingModule_->GetLandmarks(), *this->trackingModule_->GetFrames().back());
+    odometryModule_->Update(this->trackingModule_->GetLandmarks(), this->trackingModule_->GetFrames());
     this->trackingModule_->Redetect();
 
     this->visualized_ = false;

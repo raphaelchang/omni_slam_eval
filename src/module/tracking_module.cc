@@ -46,7 +46,7 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
     {
         Matrix3d E;
         std::vector<int> inlierIndices;
-        fivePointChecker_->Compute(landmarks_, **next(frames_.rbegin()), *frames_.back(), E, inlierIndices);
+        fivePointChecker_->ComputeE(landmarks_, **next(frames_.rbegin()), *frames_.back(), E, inlierIndices);
         std::unordered_set<int> inlierSet(inlierIndices.begin(), inlierIndices.end());
         for (int i = 0; i < landmarks_.size(); i++)
         {

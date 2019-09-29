@@ -1,4 +1,4 @@
-#include "tracker.h"
+#include "lk_tracker.h"
 #include <cmath>
 #include "util/tf_util.h"
 
@@ -7,7 +7,7 @@ namespace omni_slam
 namespace feature
 {
 
-Tracker::Tracker(const int window_size, const int num_scales, const float delta_pix_err_thresh, const float err_thresh, const int term_count, const double term_eps)
+LKTracker::LKTracker(const int window_size, const int num_scales, const float delta_pix_err_thresh, const float err_thresh, const int term_count, const double term_eps)
     : windowSize_(window_size / pow(2, num_scales), window_size / pow(2, num_scales)),
     numScales_(num_scales),
     errThresh_(err_thresh),
@@ -17,12 +17,12 @@ Tracker::Tracker(const int window_size, const int num_scales, const float delta_
 {
 }
 
-void Tracker::Init(data::Frame &init_frame)
+void LKTracker::Init(data::Frame &init_frame)
 {
     prevFrame_ = &init_frame;
 }
 
-int Tracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_frame, std::vector<double> &errors)
+int LKTracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_frame, std::vector<double> &errors)
 {
     if (prevFrame_ == nullptr)
     {

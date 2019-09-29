@@ -68,6 +68,18 @@ inline Matrix<T, 3, 4> QuaternionTranslationToPoseMatrix(Quaternion<T> quat, Mat
 }
 
 template <typename T>
+inline Matrix<T, 3, 4> CombineTransforms(Matrix<T, 3, 4> pose1, Matrix<T, 3, 4> pose2)
+{
+    Matrix<T, 4, 4> pose1H = Matrix<T, 4, 4>::Zero();
+    Matrix<T, 4, 4> pose2H = Matrix<T, 4, 4>::Zero();
+    pose1H.template block<3, 4>(0, 0) = pose1;
+    pose1H(3, 3) = 1;
+    pose2H.template block<3, 4>(0, 0) = pose2;
+    pose2H(3, 3) = 1;
+    return (pose1H * pose2H).template block<3, 4>(0, 0);
+}
+
+template <typename T>
 inline Matrix<T, 3, 4> GetRelativeTransform(Matrix<T, 3, 4> pose1, Matrix<T, 3, 4> pose2)
 {
     Matrix<T, 3, 4> rel;
@@ -80,8 +92,8 @@ template <typename T>
 inline Matrix<T, 3, 3> GetEssentialMatrixFromPoses(Matrix<T, 3, 4> pose1, Matrix<T, 3, 4> pose2)
 {
     Matrix<T, 3, 4> rel = GetRelativeTransform(pose1, pose2);
-    Vector3d t = -GetRotationFromPoseMatrix(rel).transpose() * rel.template block<3, 1>(0, 3);
-    Matrix3d tx;
+    Matrix<T, 3, 1> t = -GetRotationFromPoseMatrix(rel).transpose() * rel.template block<3, 1>(0, 3);
+    Matrix<T, 3, 3> tx;
     tx << 0, -t(2), t(1),
        t(2), 0, -t(0),
        -t(1), t(0), 0;

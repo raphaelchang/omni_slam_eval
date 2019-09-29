@@ -5,7 +5,7 @@
 #include <set>
 #include <memory>
 
-#include "odometry/pnp.h"
+#include "odometry/pose_estimator.h"
 #include "optimization/bundle_adjuster.h"
 #include "data/landmark.h"
 
@@ -26,16 +26,16 @@ public:
     {
     };
 
-    OdometryModule(std::unique_ptr<odometry::PNP> &pnp, std::unique_ptr<optimization::BundleAdjuster> &bundle_adjuster);
-    OdometryModule(std::unique_ptr<odometry::PNP> &&pnp, std::unique_ptr<optimization::BundleAdjuster> &&bundle_adjuster);
+    OdometryModule(std::unique_ptr<odometry::PoseEstimator> &pose_estimator, std::unique_ptr<optimization::BundleAdjuster> &bundle_adjuster);
+    OdometryModule(std::unique_ptr<odometry::PoseEstimator> &&pose_estimator, std::unique_ptr<optimization::BundleAdjuster> &&bundle_adjuster);
 
-    void Update(std::vector<data::Landmark> &landmarks, data::Frame &frame);
+    void Update(std::vector<data::Landmark> &landmarks, std::vector<std::unique_ptr<data::Frame>> &frames);
     void BundleAdjust(std::vector<data::Landmark> &landmarks);
 
     Stats& GetStats();
 
 private:
-    std::shared_ptr<odometry::PNP> pnp_;
+    std::shared_ptr<odometry::PoseEstimator> poseEstimator_;
     std::shared_ptr<optimization::BundleAdjuster> bundleAdjuster_;
 
     Stats stats_;

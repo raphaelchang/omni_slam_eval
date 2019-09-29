@@ -1,6 +1,6 @@
 #include "tracking_eval.h"
 
-#include "feature/tracker.h"
+#include "feature/lk_tracker.h"
 #include "feature/detector.h"
 #include "odometry/five_point.h"
 
@@ -47,7 +47,7 @@ TrackingEval<Stereo>::TrackingEval(const ::ros::NodeHandle &nh, const ::ros::Nod
         ROS_ERROR("Invalid feature detector specified");
     }
 
-    unique_ptr<feature::Tracker> tracker(new feature::Tracker(trackerWindowSize, trackerNumScales, trackerDeltaPixelErrorThresh, trackerErrorThresh));
+    unique_ptr<feature::Tracker> tracker(new feature::LKTracker(trackerWindowSize, trackerNumScales, trackerDeltaPixelErrorThresh, trackerErrorThresh));
 
     unique_ptr<odometry::FivePoint> checker(new odometry::FivePoint(fivePointRansacIterations, fivePointThreshold));
 

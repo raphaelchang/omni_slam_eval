@@ -23,7 +23,7 @@ PNP::PNP(int ransac_iterations, double reprojection_threshold, int num_refine_th
 {
 }
 
-int PNP::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &frame, std::vector<int> &inlier_indices) const
+int PNP::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &cur_frame, data::Frame &prev_frame, std::vector<int> &inlier_indices) const
 {
     std::vector<Vector3d> xs;
     std::vector<Vector2d> yns;
@@ -34,17 +34,17 @@ int PNP::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &fram
     int i = 0;
     for (const data::Landmark &landmark : landmarks)
     {
-        if (landmark.IsObservedInFrame(frame.GetID()))
+        if (landmark.IsObservedInFrame(cur_frame.GetID()))
         {
-            if (frame.HasStereoImage() && landmark.HasEstimatedPosition() && landmark.GetStereoObservationByFrameID(landmark.GetFirstFrameID()) != nullptr)
+            if (cur_frame.HasStereoImage() && landmark.HasEstimatedPosition() && landmark.GetStereoObservationByFrameID(landmark.GetFirstFrameID()) != nullptr)
             {
                 xs.push_back(landmark.GetEstimatedPosition());
             }
-            else if (!frame.HasStereoImage() && landmark.HasEstimatedPosition())
+            else if (!cur_frame.HasStereoImage() && landmark.HasEstimatedPosition())
             {
                 xs.push_back(landmark.GetEstimatedPosition());
             }
-            else if (!frame.HasStereoImage() && landmark.HasGroundTruth())
+            else if (!cur_frame.HasStereoImage() && landmark.HasGroundTruth())
             {
                 xs.push_back(landmark.GetGroundTruth());
             }
@@ -53,7 +53,7 @@ int PNP::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &fram
                 i++;
                 continue;
             }
-            const data::Feature *feat = landmark.GetObservationByFrameID(frame.GetID());
+            const data::Feature *feat = landmark.GetObservationByFrameID(cur_frame.GetID());
             Vector2d pix;
             pix << feat->GetKeypoint().pt.x, feat->GetKeypoint().pt.y;
             yns.push_back(pix);
@@ -69,8 +69,8 @@ int PNP::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &fram
         return 0;
     }
     Matrix<double, 3, 4> pose;
-    int inliers = RANSAC(xs, ys, yns, frame.GetCameraModel(), pose);
-    std::vector<int> indices = GetInlierIndices(xs, yns, pose, frame.GetCameraModel());
+    int inliers = RANSAC(xs, ys, yns, cur_frame.GetCameraModel(), pose);
+    std::vector<int> indices = GetInlierIndices(xs, yns, pose, cur_frame.GetCameraModel());
     if (inliers > 3)
     {
         Refine(xs, features, indices, pose);
@@ -84,14 +84,8 @@ int PNP::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &fram
         inlierIds.push_back(indexToId[inx]);
         inlier_indices.push_back(indexToLandmarkIndex[inx]);
     }
-    frame.SetEstimatedInversePose(pose, inlierIds);
+    cur_frame.SetEstimatedInversePose(pose, inlierIds);
     return inliers;
-}
-
-int PNP::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &frame) const
-{
-    std::vector<int> temp;
-    return Compute(landmarks, frame, temp);
 }
 
 int PNP::RANSAC(const std::vector<Vector3d> &xs, const std::vector<Vector3d> &ys, const std::vector<Vector2d> &yns, const camera::CameraModel<> &camera_model, Matrix<double, 3, 4> &pose) const
@@ -137,7 +131,7 @@ bool PNP::Refine(const std::vector<Vector3d> &xs, const std::vector<const data::
     ceres::LossFunction *loss_function = nullptr;
     std::vector<double> landmarks;
     landmarks.reserve(3 * indices.size());
-    Quaterniond quat(pose.block<3, 3>(0, 0));
+    Quaterniond quat(util::TFUtil::GetRotationFromPoseMatrix(pose));
     quat.normalize();
     Vector3d t(pose.block<3, 1>(0, 3));
     std::vector<double> quatData(quat.coeffs().data(), quat.coeffs().data() + 4);

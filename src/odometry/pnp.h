@@ -1,6 +1,7 @@
 #ifndef _PNP_H_
 #define _PNP_H_
 
+#include "pose_estimator.h"
 #include <Eigen/Dense>
 #include "data/landmark.h"
 #include "data/frame.h"
@@ -14,12 +15,11 @@ namespace omni_slam
 namespace odometry
 {
 
-class PNP
+class PNP : public PoseEstimator
 {
 public:
     PNP(int ransac_iterations, double reprojection_threshold, int num_refine_threads = 1);
-    int Compute(const std::vector<data::Landmark> &landmarks, data::Frame &frame, std::vector<int> &inlier_indices) const;
-    int Compute(const std::vector<data::Landmark> &landmarks, data::Frame &frame) const;
+    int Compute(const std::vector<data::Landmark> &landmarks, data::Frame &cur_frame, data::Frame &prev_frame, std::vector<int> &inlier_indices) const;
 
 private:
     int RANSAC(const std::vector<Vector3d> &xs, const std::vector<Vector3d> &ys, const std::vector<Vector2d> &yns, const camera::CameraModel<> &camera_model, Matrix<double, 3, 4> &pose) const;
