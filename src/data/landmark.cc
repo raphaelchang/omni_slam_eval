@@ -49,8 +49,20 @@ void Landmark::AddStereoObservation(Feature obs)
 void Landmark::RemoveLastObservation()
 {
     int id = obs_.back().GetFrame().GetID();
+    if (idToStereoIndex_.find(id) != idToStereoIndex_.end() && stereoObs_.back().GetFrame().GetID() == id)
+    {
+        stereoObs_.pop_back();
+        idToStereoIndex_.erase(id);
+    }
     obs_.pop_back();
     idToIndex_.erase(id);
+}
+
+void Landmark::RemoveLastStereoObservation()
+{
+    int id = stereoObs_.back().GetFrame().GetID();
+    stereoObs_.pop_back();
+    idToStereoIndex_.erase(id);
 }
 
 const std::vector<Feature>& Landmark::GetObservations() const

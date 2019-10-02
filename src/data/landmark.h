@@ -20,6 +20,7 @@ public:
     void AddObservation(Feature obs, bool compute_gnd = true);
     void AddStereoObservation(Feature obs);
     void RemoveLastObservation();
+    void RemoveLastStereoObservation();
     const std::vector<Feature>& GetObservations() const;
     std::vector<Feature>& GetObservations();
     const std::vector<Feature>& GetStereoObservations() const;

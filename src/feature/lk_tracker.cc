@@ -22,7 +22,7 @@ void LKTracker::Init(data::Frame &init_frame)
     prevFrame_ = &init_frame;
 }
 
-int LKTracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_frame, std::vector<double> &errors)
+int LKTracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_frame, std::vector<double> &errors, bool stereo)
 {
     if (prevFrame_ == nullptr)
     {
@@ -34,6 +34,9 @@ int LKTracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_fr
     std::vector<cv::Point2f> pointsToTrack;
     std::vector<cv::KeyPoint> origKpt;
     std::vector<int> origInx;
+    std::vector<cv::Point2f> stereoPointsToTrack;
+    std::vector<cv::KeyPoint> stereoOrigKpt;
+    std::vector<int> stereoOrigInx;
     for (int i = 0; i < landmarks.size(); i++)
     {
         data::Landmark &landmark = landmarks[i];
@@ -44,6 +47,16 @@ int LKTracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_fr
             origKpt.push_back(feat->GetKeypoint());
             origInx.push_back(i);
         }
+        if (cur_frame.HasStereoImage() && prevFrame_->HasStereoImage())
+        {
+            const data::Feature *stereoFeat = landmark.GetStereoObservationByFrameID(prevId);
+            if (stereoFeat != nullptr)
+            {
+                stereoPointsToTrack.push_back(stereoFeat->GetKeypoint().pt);
+                stereoOrigKpt.push_back(stereoFeat->GetKeypoint());
+                stereoOrigInx.push_back(i);
+            }
+        }
     }
     if (pointsToTrack.size() == 0)
     {
@@ -53,7 +66,14 @@ int LKTracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_fr
     std::vector<cv::Point2f> results;
     std::vector<unsigned char> status;
     std::vector<float> err;
+    std::vector<cv::Point2f> stereoResults;
+    std::vector<unsigned char> stereoStatus;
+    std::vector<float> stereoErr;
     cv::calcOpticalFlowPyrLK(prevFrame_->GetImage(), cur_frame.GetImage(), pointsToTrack, results, status, err, windowSize_, numScales_, termCrit_, 0);
+    if (stereoPointsToTrack.size() > 0)
+    {
+        cv::calcOpticalFlowPyrLK(prevFrame_->GetStereoImage(), cur_frame.GetStereoImage(), stereoPointsToTrack, stereoResults, stereoStatus, stereoErr, windowSize_, numScales_, termCrit_, 0);
+    }
     errors.clear();
     int numGood = 0;
     for (int i = 0; i < results.size(); i++)
@@ -91,6 +111,20 @@ int LKTracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_fr
             landmark.AddObservation(feat);
             errors.push_back(err[i]);
             numGood++;
+        }
+    }
+    for (int i = 0; i < stereoResults.size(); i++)
+    {
+        data::Landmark &landmark = landmarks[stereoOrigInx[i]];
+        if (!landmark.IsObservedInFrame(cur_frame.GetID()))
+        {
+            continue;
+        }
+        if (stereoStatus[i] == 1 && stereoErr[i] <= errThresh_)
+        {
+            cv::KeyPoint kpt(stereoResults[i], stereoOrigKpt[i].size);
+            data::Feature feat(cur_frame, kpt);
+            landmark.AddStereoObservation(feat);
         }
     }
     if (prevCompressed)

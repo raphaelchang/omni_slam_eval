@@ -14,9 +14,11 @@ namespace omni_slam
 namespace odometry
 {
 
-FivePoint::FivePoint(int ransac_iterations, double epipolar_threshold, int num_ceres_threads)
+FivePoint::FivePoint(int ransac_iterations, double epipolar_threshold, int trans_ransac_iterations, double reprojection_threshold, int num_ceres_threads)
     : ransacIterations_(ransac_iterations),
     epipolarThreshold_(epipolar_threshold),
+    transIterations_(trans_ransac_iterations),
+    reprojectionThreshold_(reprojection_threshold),
     numCeresThreads_(num_ceres_threads)
 {
 }
@@ -32,7 +34,7 @@ int FivePoint::Compute(const std::vector<data::Landmark> &landmarks, data::Frame
     int bestPoints = 0;
     Matrix<double, 3, 4> bestPose;
     std::vector<Vector3d> bestXs;
-    std::vector<const data::Feature*> bestFeats;
+    std::vector<std::pair<const data::Feature*, const data::Feature*>> bestFeats;
     std::vector<int> bestIds;
     for (int i = 0; i < rs.size(); i++)
     {
@@ -41,7 +43,7 @@ int FivePoint::Compute(const std::vector<data::Landmark> &landmarks, data::Frame
         P.block<3, 1>(0, 3) = ts[i];
         int goodPoints = 0;
         std::vector<Vector3d> xs;
-        std::vector<const data::Feature*> feats;
+        std::vector<std::pair<const data::Feature*, const data::Feature*>> feats;
         std::vector<int> ids;
         for (int inx : inlier_indices)
         {
@@ -54,22 +56,11 @@ int FivePoint::Compute(const std::vector<data::Landmark> &landmarks, data::Frame
             if (cur_frame.GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(X), pix) && prev_frame.GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(P, X)), pix))
             {
                 goodPoints++;
-                if (prev_frame.HasStereoImage() && landmark.HasEstimatedPosition() && landmark.GetStereoObservationByFrameID(landmark.GetFirstFrameID()) != nullptr)
+                if (prev_frame.HasStereoImage() && landmark.HasEstimatedPosition() && landmark.GetStereoObservationByFrameID(cur_frame.GetID()) != nullptr)
                 {
+                    const data::Feature *stereoFeat = landmark.GetStereoObservationByFrameID(cur_frame.GetID());
                     xs.push_back(landmark.GetEstimatedPosition());
-                    feats.push_back(feat2);
-                    ids.push_back(landmark.GetID());
-                }
-                else if (!prev_frame.HasStereoImage() && landmark.HasEstimatedPosition())
-                {
-                    xs.push_back(landmark.GetEstimatedPosition());
-                    feats.push_back(feat2);
-                    ids.push_back(landmark.GetID());
-                }
-                else if (!prev_frame.HasStereoImage() && landmark.HasGroundTruth())
-                {
-                    xs.push_back(landmark.GetGroundTruth());
-                    feats.push_back(feat2);
+                    feats.push_back({feat2, stereoFeat});
                     ids.push_back(landmark.GetID());
                 }
             }
@@ -100,14 +91,21 @@ int FivePoint::Compute(const std::vector<data::Landmark> &landmarks, data::Frame
         estPose = bestPose;
         t << 0, 0, 0;
     }
-    ComputeTranslation(bestXs, bestFeats, util::TFUtil::GetRotationFromPoseMatrix(estPose), t);
+    std::vector<int> transInliers;
+    inliers = ComputeTranslation(bestXs, bestFeats, util::TFUtil::GetRotationFromPoseMatrix(estPose), t, transInliers);
+    std::vector<int> transInlierIds;
+    transInlierIds.reserve(inliers);
+    for (int i : transInliers)
+    {
+        transInlierIds.push_back(bestIds[i]);
+    }
     estPose.block<3, 1>(0, 3) = t;
-    cur_frame.SetEstimatedInversePose(estPose, bestIds);
+    cur_frame.SetEstimatedInversePose(estPose, transInlierIds);
 
     return inliers;
 }
 
-int FivePoint::ComputeE(const std::vector<data::Landmark> &landmarks, const data::Frame &frame1, const data::Frame &frame2, Matrix3d &E, std::vector<int> &inlier_indices) const
+int FivePoint::ComputeE(const std::vector<data::Landmark> &landmarks, const data::Frame &frame1, const data::Frame &frame2, Matrix3d &E, std::vector<int> &inlier_indices, bool stereo) const
 {
     std::vector<Vector3d> x1;
     std::vector<Vector3d> x2;
@@ -115,10 +113,10 @@ int FivePoint::ComputeE(const std::vector<data::Landmark> &landmarks, const data
     int i = 0;
     for (const data::Landmark &landmark : landmarks)
     {
-        if (landmark.IsObservedInFrame(frame2.GetID()) && landmark.IsObservedInFrame(frame1.GetID()))
+        const data::Feature *feat1 = stereo ? landmark.GetStereoObservationByFrameID(frame1.GetID()) : landmark.GetObservationByFrameID(frame1.GetID());
+        const data::Feature *feat2 = stereo ? landmark.GetStereoObservationByFrameID(frame2.GetID()) : landmark.GetObservationByFrameID(frame2.GetID());
+        if (feat1 != nullptr && feat2 != nullptr)
         {
-            const data::Feature *feat1 = landmark.GetObservationByFrameID(frame1.GetID());
-            const data::Feature *feat2 = landmark.GetObservationByFrameID(frame2.GetID());
             x1.push_back(feat1->GetBearing().normalized());
             x2.push_back(feat2->GetBearing().normalized());
             indexToLandmarkIndex[x1.size() - 1] = i;
@@ -129,8 +127,8 @@ int FivePoint::ComputeE(const std::vector<data::Landmark> &landmarks, const data
     {
         return 0;
     }
-    int inliers = RANSAC(x1, x2, E);
-    std::vector<int> indices = GetInlierIndices(x1, x2, E);
+    int inliers = ERANSAC(x1, x2, E);
+    std::vector<int> indices = GetEInlierIndices(x1, x2, E);
     inlier_indices.clear();
     inlier_indices.reserve(indices.size());
     for (int inx : indices)
@@ -140,7 +138,7 @@ int FivePoint::ComputeE(const std::vector<data::Landmark> &landmarks, const data
     return inliers;
 }
 
-int FivePoint::RANSAC(const std::vector<Vector3d> &x1, const std::vector<Vector3d> &x2, Matrix3d &E) const
+int FivePoint::ERANSAC(const std::vector<Vector3d> &x1, const std::vector<Vector3d> &x2, Matrix3d &E) const
 {
     int maxInliers = 0;
     #pragma omp parallel for
@@ -169,7 +167,7 @@ int FivePoint::RANSAC(const std::vector<Vector3d> &x1, const std::vector<Vector3
 
         for (Matrix3d &e : iterE)
         {
-            int inliers = GetInlierIndices(x1, x2, e).size();
+            int inliers = GetEInlierIndices(x1, x2, e).size();
             #pragma omp critical
             {
                 if (inliers > maxInliers)
@@ -183,7 +181,7 @@ int FivePoint::RANSAC(const std::vector<Vector3d> &x1, const std::vector<Vector3
     return maxInliers;
 }
 
-std::vector<int> FivePoint::GetInlierIndices(const std::vector<Vector3d> &x1, const std::vector<Vector3d> &x2, const Matrix3d &E) const
+std::vector<int> FivePoint::GetEInlierIndices(const std::vector<Vector3d> &x1, const std::vector<Vector3d> &x2, const Matrix3d &E) const
 {
     std::vector<int> indices;
     for (int i = 0; i < x1.size(); i++)
@@ -305,10 +303,63 @@ void FivePoint::EssentialToPoses(const Matrix3d &E, std::vector<Matrix3d> &rs, s
     ts.emplace_back(-UWtVt.transpose() * U.col(2));
 }
 
-void FivePoint::ComputeTranslation(const std::vector<Vector3d> &xs, const std::vector<const data::Feature*> &ys, const Matrix3d &R, Vector3d &t) const
+int FivePoint::ComputeTranslation(const std::vector<Vector3d> &xs, const std::vector<std::pair<const data::Feature*, const data::Feature*>> &ys, const Matrix3d &R, Vector3d &t, std::vector<int> &inlier_indices) const
+{
+    int inliers = TranslationRANSAC(xs, ys, R, t);
+    inlier_indices = GetTranslationInlierIndices(xs, ys, R, t);
+    std::vector<Vector3d> xs_inliers;
+    std::vector<std::pair<const data::Feature*, const data::Feature*>> ys_inliers;
+    xs_inliers.reserve(inlier_indices.size());
+    ys_inliers.reserve(inlier_indices.size());
+    for (int inx : inlier_indices)
+    {
+        xs_inliers.push_back(xs[inx]);
+        ys_inliers.push_back(ys[inx]);
+    }
+    OptimizeTranslation(xs_inliers, ys_inliers, R, t);
+    return inliers;
+}
+
+int FivePoint::TranslationRANSAC(const std::vector<Vector3d> &xs, const std::vector<std::pair<const data::Feature*, const data::Feature*>> &ys, const Matrix3d &R, Vector3d &t) const
+{
+    int bestInliers = 0;
+    std::random_device rd;
+    std::mt19937 eng(rd());
+    std::uniform_int_distribution<> distr(0, xs.size() - 1);
+    std::set<int> randset;
+    while (randset.size() < std::min(transIterations_, (int)xs.size()))
+    {
+        randset.insert(distr(eng));
+    }
+    std::vector<int> indices;
+    std::copy(randset.begin(), randset.end(), std::back_inserter(indices));
+
+    #pragma omp parallel for
+    for (int i = 0; i < indices.size(); i++)
+    {
+        std::vector<Vector3d> x{xs[indices[i]]};
+        std::vector<std::pair<const data::Feature*, const data::Feature*>> y{ys[indices[i]]};
+        Vector3d tmpT = t;
+        if (OptimizeTranslation(x, y, R, tmpT))
+        {
+            int inliers = GetTranslationInlierIndices(xs, ys, R, tmpT).size();
+            #pragma omp critical
+            {
+                if (inliers > bestInliers)
+                {
+                    t = tmpT;
+                    bestInliers = inliers;
+                }
+            }
+        }
+    }
+    return bestInliers;
+}
+
+bool FivePoint::OptimizeTranslation(const std::vector<Vector3d> &xs, const std::vector<std::pair<const data::Feature*, const data::Feature*>> &ys, const Matrix3d &R, Vector3d &t) const
 {
     ceres::Problem problem;
-    ceres::LossFunction *loss_function = new ceres::HuberLoss(0.001);
+    ceres::LossFunction *loss_function = nullptr;
     std::vector<double> landmarks;
     landmarks.reserve(3 * xs.size());
     Quaterniond quat(R);
@@ -322,13 +373,13 @@ void FivePoint::ComputeTranslation(const std::vector<Vector3d> &xs, const std::v
         landmarks.push_back(x(1));
         landmarks.push_back(x(2));
         ceres::CostFunction *cost_function = nullptr;
-        if (ys[i]->GetFrame().GetCameraModel().GetType() == camera::CameraModel<>::kPerspective)
+        if (ys[i].first->GetFrame().GetCameraModel().GetType() == camera::CameraModel<>::kPerspective)
         {
-            cost_function = optimization::ReprojectionError<camera::Perspective>::Create(*ys[i]);
+            cost_function = optimization::ReprojectionError<camera::Perspective>::Create(*ys[i].first, *ys[i].second);
         }
-        else if (ys[i]->GetFrame().GetCameraModel().GetType() == camera::CameraModel<>::kDoubleSphere)
+        else if (ys[i].first->GetFrame().GetCameraModel().GetType() == camera::CameraModel<>::kDoubleSphere)
         {
-            cost_function = optimization::ReprojectionError<camera::DoubleSphere>::Create(*ys[i]);
+            cost_function = optimization::ReprojectionError<camera::DoubleSphere>::Create(*ys[i].first, *ys[i].second);
         }
         if (cost_function != nullptr)
         {
@@ -347,10 +398,39 @@ void FivePoint::ComputeTranslation(const std::vector<Vector3d> &xs, const std::v
     ceres::Solve(options, &problem, &summary);
     if (!summary.IsSolutionUsable())
     {
-        return;
+        return false;
     }
     const Vector3d tRes = Map<const Vector3d>(&tData[0]);
     t = tRes;
+    return true;
+}
+
+std::vector<int> FivePoint::GetTranslationInlierIndices(const std::vector<Vector3d> &xs, const std::vector<std::pair<const data::Feature*, const data::Feature*>> &ys, const Matrix3d &R, const Vector3d &t) const
+{
+    std::vector<int> indices;
+    double thresh = reprojectionThreshold_ * reprojectionThreshold_;
+    for (int i = 0; i < xs.size(); i++)
+    {
+        Matrix<double, 3, 4> pose;
+        pose.block<3, 3>(0, 0) = R;
+        pose.block<3, 1>(0, 3) = t;
+        const Vector3d camPt = util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(pose, xs[i]));
+        Vector2d reprojPoint;
+        ys[i].first->GetFrame().GetCameraModel().ProjectToImage(camPt, reprojPoint);
+        Vector2d stereoReprojPoint;
+        ys[i].second->GetFrame().GetStereoCameraModel().ProjectToImage(util::TFUtil::TransformPoint(ys[i].second->GetFrame().GetStereoPose(), camPt), stereoReprojPoint);
+        Vector2d pt;
+        pt << ys[i].first->GetKeypoint().pt.x, ys[i].first->GetKeypoint().pt.y;
+        Vector2d stereoPt;
+        stereoPt << ys[i].second->GetKeypoint().pt.x, ys[i].second->GetKeypoint().pt.y;
+        double reprojError = (reprojPoint - pt).squaredNorm();
+        double stereoReprojError = (stereoReprojPoint - stereoPt).squaredNorm();
+        if (reprojError < thresh && stereoReprojError < thresh)
+        {
+            indices.push_back(i);
+        }
+    }
+    return indices;
 }
 
 Vector3d FivePoint::TriangulateDLT(const Vector3d &x1, const Vector3d &x2, const Matrix<double, 3, 4> &pose1, const Matrix<double, 3, 4> &pose2) const

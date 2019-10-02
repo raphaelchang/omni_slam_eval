@@ -47,8 +47,8 @@ public:
             Matrix<T, 3, 4> stereoPose = stereoFeature_.GetFrame().GetStereoPose().cast<T>();
             C<T> stereoCamera(feature_.GetFrame().GetStereoCameraModel());
             stereoCamera.ProjectToImage(util::TFUtil::TransformPoint(stereoPose, camPt), reprojPoint2);
-            reproj_error[0] += reprojPoint(0) - T(stereoFeature_.GetKeypoint().pt.x);
-            reproj_error[1] += reprojPoint(1) - T(stereoFeature_.GetKeypoint().pt.y);
+            reproj_error[2] = reprojPoint2(0) - T(stereoFeature_.GetKeypoint().pt.x);
+            reproj_error[3] = reprojPoint2(1) - T(stereoFeature_.GetKeypoint().pt.y);
         }
         return true;
     }
@@ -60,7 +60,7 @@ public:
 
     static ceres::CostFunction* Create(const data::Feature &feature, const data::Feature &stereo_feature)
     {
-        return new ceres::AutoDiffCostFunction<ReprojectionError, 2, 4, 3, 3>(new ReprojectionError<C>(feature, stereo_feature));
+        return new ceres::AutoDiffCostFunction<ReprojectionError, 4, 4, 3, 3>(new ReprojectionError<C>(feature, stereo_feature));
     }
 
 private:

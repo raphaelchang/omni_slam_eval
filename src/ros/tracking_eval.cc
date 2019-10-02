@@ -49,7 +49,7 @@ TrackingEval<Stereo>::TrackingEval(const ::ros::NodeHandle &nh, const ::ros::Nod
 
     unique_ptr<feature::Tracker> tracker(new feature::LKTracker(trackerWindowSize, trackerNumScales, trackerDeltaPixelErrorThresh, trackerErrorThresh));
 
-    unique_ptr<odometry::FivePoint> checker(new odometry::FivePoint(fivePointRansacIterations, fivePointThreshold));
+    unique_ptr<odometry::FivePoint> checker(new odometry::FivePoint(fivePointRansacIterations, fivePointThreshold, 0, 0));
 
     trackingModule_.reset(new module::TrackingModule(detector, tracker, checker, minFeaturesRegion, maxFeaturesRegion));
 }

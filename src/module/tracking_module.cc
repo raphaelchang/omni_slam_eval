@@ -55,6 +55,20 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
                 landmarks_[i].RemoveLastObservation();
             }
         }
+        if (frames_.back()->HasStereoImage())
+        {
+            Matrix3d E;
+            std::vector<int> inlierIndices;
+            fivePointChecker_->ComputeE(landmarks_, **next(frames_.rbegin()), *frames_.back(), E, inlierIndices, true);
+            std::unordered_set<int> inlierSet(inlierIndices.begin(), inlierIndices.end());
+            for (int i = 0; i < landmarks_.size(); i++)
+            {
+                if (landmarks_[i].GetStereoObservationByFrameID(frames_.back()->GetID()) != nullptr && inlierSet.find(i) == inlierSet.end())
+                {
+                    landmarks_[i].RemoveLastStereoObservation();
+                }
+            }
+        }
     }
 
     int i = 0;

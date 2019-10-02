@@ -41,7 +41,7 @@ OdometryEval<Stereo>::OdometryEval(const ::ros::NodeHandle &nh, const ::ros::Nod
     this->nhp_.param("tracker_checker_iterations", fivePointRansacIterations, 1000);
 
     unique_ptr<odometry::PoseEstimator> poseEstimator(new odometry::PNP(iterations, reprojThresh, numCeresThreads));
-    //unique_ptr<odometry::PoseEstimator> poseEstimator(new odometry::FivePoint(fivePointRansacIterations, fivePointThreshold, numCeresThreads));
+    //unique_ptr<odometry::PoseEstimator> poseEstimator(new odometry::FivePoint(fivePointRansacIterations, fivePointThreshold, iterations, reprojThresh, numCeresThreads));
     unique_ptr<optimization::BundleAdjuster> bundleAdjuster(new optimization::BundleAdjuster(baMaxIter, baLossCoeff, numCeresThreads, logCeres));
 
     odometryModule_.reset(new module::OdometryModule(poseEstimator, bundleAdjuster));

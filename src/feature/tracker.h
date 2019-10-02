@@ -13,7 +13,7 @@ class Tracker
 {
 public:
     virtual void Init(data::Frame &init_frame) = 0;
-    virtual int Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_frame, std::vector<double> &errors) = 0;
+    virtual int Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_frame, std::vector<double> &errors, bool stereo = true) = 0;
 };
 
 }
