@@ -40,13 +40,14 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
         return;
     }
 
+    const data::Frame *keyframe = tracker_->GetLastKeyframe();
     vector<double> trackErrors;
     int tracks = tracker_->Track(landmarks_, *frames_.back(), trackErrors);
     if (fivePointChecker_ && tracks > 0)
     {
         Matrix3d E;
         std::vector<int> inlierIndices;
-        fivePointChecker_->ComputeE(landmarks_, **next(frames_.rbegin()), *frames_.back(), E, inlierIndices);
+        fivePointChecker_->ComputeE(landmarks_, *keyframe, *frames_.back(), E, inlierIndices);
         std::unordered_set<int> inlierSet(inlierIndices.begin(), inlierIndices.end());
         for (int i = 0; i < landmarks_.size(); i++)
         {
@@ -59,7 +60,7 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
         {
             Matrix3d E;
             std::vector<int> inlierIndices;
-            fivePointChecker_->ComputeE(landmarks_, **next(frames_.rbegin()), *frames_.back(), E, inlierIndices, true);
+            fivePointChecker_->ComputeE(landmarks_, *keyframe, *frames_.back(), E, inlierIndices, true);
             std::unordered_set<int> inlierSet(inlierIndices.begin(), inlierIndices.end());
             for (int i = 0; i < landmarks_.size(); i++)
             {
@@ -149,6 +150,10 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
 
 void TrackingModule::Redetect()
 {
+    if (tracker_->GetLastKeyframe() != frames_.back().get())
+    {
+        return;
+    }
     int imsize = max(frames_.back()->GetImage().rows, frames_.back()->GetImage().cols);
     #pragma omp parallel for collapse(2)
     for (int i = 0; i < rs_.size() - 1; i++)

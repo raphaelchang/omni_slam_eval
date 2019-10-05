@@ -12,8 +12,25 @@ namespace feature
 class Tracker
 {
 public:
-    virtual void Init(data::Frame &init_frame) = 0;
-    virtual int Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_frame, std::vector<double> &errors, bool stereo = true) = 0;
+    Tracker(const int keyframe_interval = 1);
+
+    virtual void Init(data::Frame &init_frame);
+    int Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_frame, std::vector<double> &errors, bool stereo = true);
+
+    const data::Frame* GetLastKeyframe();
+
+protected:
+    cv::Mat keyframeImg_;
+    cv::Mat keyframeStereoImg_;
+    int keyframeId_;
+    int prevId_;
+    const data::Frame *prevFrame_;
+
+private:
+    virtual int DoTrack(std::vector<data::Landmark> &landmarks, data::Frame &cur_frame, std::vector<double> &errors, bool stereo) = 0;
+
+    int frameNum_{0};
+    const int keyframeInterval_;
 };
 
 }

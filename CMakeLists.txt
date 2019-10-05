@@ -63,6 +63,7 @@ add_library(omni_slam_eval_lib
   src/data/frame.cc
   src/data/feature.cc
   src/data/landmark.cc
+  src/feature/tracker.cc
   src/feature/lk_tracker.cc
   src/feature/detector.cc
   src/feature/matcher.cc
