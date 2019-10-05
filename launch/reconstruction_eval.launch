@@ -25,6 +25,7 @@
             tracker_checker_iterations: 1000
             tracker_delta_pixel_error_threshold: 0.0
             tracker_error_threshold: 20.0
+            tracker_template_update_rate: 1
             min_features_per_region: 10
             max_features_per_region: 5000
             max_reprojection_error: 5.0

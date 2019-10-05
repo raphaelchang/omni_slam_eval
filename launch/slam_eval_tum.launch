@@ -35,7 +35,8 @@
             tracker_checker_iterations: 1000
             tracker_delta_pixel_error_threshold: 0.0
             tracker_error_threshold: 1000000.0
-            min_features_per_region: 100
+            tracker_template_update_rate: 1
+            min_features_per_region: 10
             max_features_per_region: 1000
             pnp_inlier_threshold: 3.0
             pnp_iterations: 3000

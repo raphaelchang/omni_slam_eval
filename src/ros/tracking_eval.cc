@@ -18,6 +18,7 @@ TrackingEval<Stereo>::TrackingEval(const ::ros::NodeHandle &nh, const ::ros::Nod
     string detectorType;
     int trackerWindowSize;
     int trackerNumScales;
+    int trackerTemplateUpdateRate;
     double fivePointThreshold;
     int fivePointRansacIterations;
     double trackerDeltaPixelErrorThresh;
@@ -33,6 +34,7 @@ TrackingEval<Stereo>::TrackingEval(const ::ros::NodeHandle &nh, const ::ros::Nod
     this->nhp_.param("tracker_checker_iterations", fivePointRansacIterations, 1000);
     this->nhp_.param("tracker_delta_pixel_error_threshold", trackerDeltaPixelErrorThresh, 5.0);
     this->nhp_.param("tracker_error_threshold", trackerErrorThresh, 20.);
+    this->nhp_.param("tracker_template_update_rate", trackerTemplateUpdateRate, 1);
     this->nhp_.param("min_features_per_region", minFeaturesRegion, 5);
     this->nhp_.param("max_features_per_region", maxFeaturesRegion, 5000);
     this->nhp_.getParam("detector_parameters", detectorParams);
@@ -47,7 +49,7 @@ TrackingEval<Stereo>::TrackingEval(const ::ros::NodeHandle &nh, const ::ros::Nod
         ROS_ERROR("Invalid feature detector specified");
     }
 
-    unique_ptr<feature::Tracker> tracker(new feature::LKTracker(trackerWindowSize, trackerNumScales, trackerDeltaPixelErrorThresh, trackerErrorThresh));
+    unique_ptr<feature::Tracker> tracker(new feature::LKTracker(trackerWindowSize, trackerNumScales, trackerDeltaPixelErrorThresh, trackerErrorThresh, trackerTemplateUpdateRate));
 
     unique_ptr<odometry::FivePoint> checker(new odometry::FivePoint(fivePointRansacIterations, fivePointThreshold, 0, 0));
 
