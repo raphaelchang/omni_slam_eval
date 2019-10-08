@@ -7,6 +7,7 @@
 
 #include "feature/tracker.h"
 #include "feature/detector.h"
+#include "feature/region.h"
 #include "odometry/five_point.h"
 #include "data/frame.h"
 #include "data/landmark.h"
@@ -36,6 +37,7 @@ public:
 
     std::vector<data::Landmark>& GetLandmarks();
     std::vector<std::unique_ptr<data::Frame>>& GetFrames();
+    const data::Frame* GetLastKeyframe();
 
     Stats& GetStats();
     void Visualize(cv::Mat &base_img);
@@ -65,9 +67,8 @@ private:
 
     std::vector<std::unique_ptr<data::Frame>> frames_;
     std::vector<data::Landmark> landmarks_;
+    const data::Frame *lastKeyframe_;
 
-    const std::vector<double> rs_{0, 0.1, 0.2, 0.3, 0.4, 0.49};
-    const std::vector<double> ts_{-M_PI, -3 * M_PI / 4, -M_PI / 2, -M_PI / 4, 0, M_PI / 4, M_PI / 2, 3 * M_PI / 4, M_PI};
     int minFeaturesRegion_;
     int maxFeaturesRegion_;
     std::map<std::pair<int, int>, int> regionCount_;

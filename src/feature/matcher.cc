@@ -18,13 +18,13 @@ Matcher::Matcher(std::string descriptor_type, double max_dist)
     }
 }
 
-std::map<std::pair<int, int>, int> Matcher::Match(const std::vector<data::Landmark> &train, const std::vector<data::Landmark> &query, std::vector<data::Landmark> &matches, std::vector<std::vector<double>> &distances) const
+std::map<std::pair<int, int>, int> Matcher::Match(const std::vector<data::Landmark> &train, const std::vector<data::Landmark> &query, std::vector<data::Landmark> &matches, std::vector<std::vector<double>> &distances, std::vector<int> &query_match_indices, bool stereo) const
 {
     std::map<int, cv::Mat> trainDescriptors;
     std::map<int, std::vector<const data::Feature*>> trainDescInxToFeature;
     for (const data::Landmark &landmark : train)
     {
-        for (const data::Feature &feat : landmark.GetObservations())
+        for (const data::Feature &feat : stereo ? landmark.GetStereoObservations() : landmark.GetObservations())
         {
             const int id = feat.GetFrame().GetID();
             trainDescInxToFeature[id].push_back(&feat);
@@ -33,19 +33,24 @@ std::map<std::pair<int, int>, int> Matcher::Match(const std::vector<data::Landma
     }
     std::map<int, cv::Mat> queryDescriptors;
     std::map<int, std::vector<const data::Feature*>> queryDescInxToFeature;
+    std::map<const data::Feature*, int> featureToQueryInx;
+    int i = 0;
     for (const data::Landmark &landmark : query)
     {
-        for (const data::Feature &feat : landmark.GetObservations())
+        for (const data::Feature &feat : stereo ? landmark.GetStereoObservations() : landmark.GetObservations())
         {
             const int id = feat.GetFrame().GetID();
             queryDescInxToFeature[id].push_back(&feat);
             queryDescriptors[id].push_back(feat.GetDescriptor());
+            featureToQueryInx[&feat] = i;
         }
+        i++;
     }
 
     std::map<std::pair<int, int>, int> numMatches;
     matches.clear();
     distances.clear();
+    query_match_indices.clear();
     std::map<const data::Feature*, int> featureToMatchesInx;
     for (auto &queryPair : queryDescriptors)
     {
@@ -68,9 +73,10 @@ std::map<std::pair<int, int>, int> Matcher::Match(const std::vector<data::Landma
                     {
                         featureToMatchesInx[queryFeat] = matches.size();
                         data::Landmark landmark;
-                        landmark.AddObservation(*queryFeat);
+                        landmark.AddObservation(*queryFeat, false);
                         matches.push_back(landmark);
                         distances.push_back(std::vector<double>());
+                        query_match_indices.push_back(featureToQueryInx[queryFeat]);
                     }
                     matches[featureToMatchesInx[queryFeat]].AddObservation(*trainDescInxToFeature[trainPair.first][match.trainIdx]);
                     distances[featureToMatchesInx[queryFeat]].push_back(fabs(match.distance));

@@ -30,12 +30,12 @@ void MatchingModule::Update(std::unique_ptr<data::Frame> &frame)
     vector<data::Landmark> curLandmarks;
     int imsize = max(frames_.back()->GetImage().rows, frames_.back()->GetImage().cols);
     #pragma omp parallel for collapse(2)
-    for (int i = 0; i < rs_.size() - 1; i++)
+    for (int i = 0; i < feature::Region::rs.size() - 1; i++)
     {
-        for (int j = 0; j < ts_.size() - 1; j++)
+        for (int j = 0; j < feature::Region::ts.size() - 1; j++)
         {
             feature::Detector detector(*detector_);
-            detector.DetectInRadialRegion(*frames_.back(), curLandmarks, rs_[i] * imsize, rs_[i+1] * imsize, ts_[j], ts_[j+1]);
+            detector.DetectInRadialRegion(*frames_.back(), curLandmarks, feature::Region::rs[i] * imsize, feature::Region::rs[i+1] * imsize, feature::Region::ts[j], feature::Region::ts[j+1]);
         }
     }
 
@@ -61,7 +61,8 @@ void MatchingModule::Update(std::unique_ptr<data::Frame> &frame)
 
     vector<data::Landmark> matches;
     vector<vector<double>> distances;
-    map<pair<int, int>, int> numMatches = matcher_->Match(landmarks_, curLandmarks, matches, distances);
+    vector<int> indices;
+    map<pair<int, int>, int> numMatches = matcher_->Match(landmarks_, curLandmarks, matches, distances, indices);
     map<pair<int, int>, int> numGoodMatches;
     map<pair<int, int>, priority_queue<double>> goodDists;
     map<pair<int, int>, priority_queue<double>> badDists;

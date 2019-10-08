@@ -115,7 +115,25 @@ const Feature* Landmark::GetObservationByFrameID(const int frame_id) const
     return &obs_[idToIndex_.at(frame_id)];
 }
 
+Feature* Landmark::GetObservationByFrameID(const int frame_id)
+{
+    if (idToIndex_.find(frame_id) == idToIndex_.end())
+    {
+        return nullptr;
+    }
+    return &obs_[idToIndex_.at(frame_id)];
+}
+
 const Feature* Landmark::GetStereoObservationByFrameID(const int frame_id) const
+{
+    if (idToStereoIndex_.find(frame_id) == idToStereoIndex_.end())
+    {
+        return nullptr;
+    }
+    return &stereoObs_[idToStereoIndex_.at(frame_id)];
+}
+
+Feature* Landmark::GetStereoObservationByFrameID(const int frame_id)
 {
     if (idToStereoIndex_.find(frame_id) == idToStereoIndex_.end())
     {

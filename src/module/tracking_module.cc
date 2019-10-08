@@ -33,6 +33,7 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
     if (frameNum_ == 0)
     {
         tracker_->Init(*frames_.back());
+        lastKeyframe_ = tracker_->GetLastKeyframe();
 
         visualization_.Init(frames_.back()->GetImage().size(), landmarks_.size());
 
@@ -40,14 +41,14 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
         return;
     }
 
-    const data::Frame *keyframe = tracker_->GetLastKeyframe();
+    lastKeyframe_ = tracker_->GetLastKeyframe();
     vector<double> trackErrors;
     int tracks = tracker_->Track(landmarks_, *frames_.back(), trackErrors);
     if (fivePointChecker_ && tracks > 0)
     {
         Matrix3d E;
         std::vector<int> inlierIndices;
-        fivePointChecker_->ComputeE(landmarks_, *keyframe, *frames_.back(), E, inlierIndices);
+        fivePointChecker_->ComputeE(landmarks_, *lastKeyframe_, *frames_.back(), E, inlierIndices);
         std::unordered_set<int> inlierSet(inlierIndices.begin(), inlierIndices.end());
         for (int i = 0; i < landmarks_.size(); i++)
         {
@@ -60,7 +61,7 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
         {
             Matrix3d E;
             std::vector<int> inlierIndices;
-            fivePointChecker_->ComputeE(landmarks_, *keyframe, *frames_.back(), E, inlierIndices, true);
+            fivePointChecker_->ComputeE(landmarks_, *lastKeyframe_, *frames_.back(), E, inlierIndices, true);
             std::unordered_set<int> inlierSet(inlierIndices.begin(), inlierIndices.end());
             for (int i = 0; i < landmarks_.size(); i++)
             {
@@ -86,35 +87,38 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
             double y = obs->GetKeypoint().pt.y - frames_.back()->GetImage().rows / 2. + 0.5;
             double r = sqrt(x * x + y * y) / imsize;
             double t = util::MathUtil::FastAtan2(y, x);
-            vector<double>::const_iterator ri = upper_bound(rs_.begin(), rs_.end(), r);
-            vector<double>::const_iterator ti = upper_bound(ts_.begin(), ts_.end(), t);
-            int rinx = min((int)(ri - rs_.begin()), (int)(rs_.size() - 1)) - 1;
-            int tinx = min((int)(ti - ts_.begin()), (int)(ts_.size() - 1)) - 1;
+            vector<double>::const_iterator ri = upper_bound(feature::Region::rs.begin(), feature::Region::rs.end(), r);
+            vector<double>::const_iterator ti = upper_bound(feature::Region::ts.begin(), feature::Region::ts.end(), t);
+            int rinx = min((int)(ri - feature::Region::rs.begin()), (int)(feature::Region::rs.size() - 1)) - 1;
+            int tinx = min((int)(ti - feature::Region::ts.begin()), (int)(feature::Region::ts.size() - 1)) - 1;
             regionCount_[{rinx, tinx}]++;
             regionLandmarks_[{rinx, tinx}].push_back(&landmark);
 
             const data::Feature *obsPrev = landmark.GetObservationByFrameID((*next(frames_.rbegin()))->GetID());
-            Vector2d pixelGnd;
-            if (frames_.back()->HasPose() && landmark.HasGroundTruth())
+            if (obsPrev != nullptr)
             {
-                if (frames_.back()->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(frames_.back()->GetInversePose(), landmark.GetGroundTruth())), pixelGnd))
+                Vector2d pixelGnd;
+                if (frames_.back()->HasPose() && landmark.HasGroundTruth())
                 {
-                    Vector2d pixel;
-                    pixel << obs->GetKeypoint().pt.x, obs->GetKeypoint().pt.y;
-                    double error = (pixel - pixelGnd).norm();
+                    if (frames_.back()->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(frames_.back()->GetInversePose(), landmark.GetGroundTruth())), pixelGnd))
+                    {
+                        Vector2d pixel;
+                        pixel << obs->GetKeypoint().pt.x, obs->GetKeypoint().pt.y;
+                        double error = (pixel - pixelGnd).norm();
 
-                    visualization_.AddTrack(cv::Point2f(pixelGnd(0), pixelGnd(1)), obsPrev->GetKeypoint().pt, obs->GetKeypoint().pt, error, i);
+                        visualization_.AddTrack(cv::Point2f(pixelGnd(0), pixelGnd(1)), obsPrev->GetKeypoint().pt, obs->GetKeypoint().pt, error, i);
 
-                    double xg = pixelGnd(0) - frames_.back()->GetImage().cols / 2. + 0.5;
-                    double yg = pixelGnd(1) - frames_.back()->GetImage().rows / 2. + 0.5;
-                    double rg = sqrt(xg * xg + yg * yg) / imsize;
-                    stats_.radialErrors.emplace_back(vector<double>{rg, error});
-                    stats_.frameErrors.emplace_back(vector<double>{(double)landmark.GetNumObservations() - 1, (double)i, rg, error});
+                        double xg = pixelGnd(0) - frames_.back()->GetImage().cols / 2. + 0.5;
+                        double yg = pixelGnd(1) - frames_.back()->GetImage().rows / 2. + 0.5;
+                        double rg = sqrt(xg * xg + yg * yg) / imsize;
+                        stats_.radialErrors.emplace_back(vector<double>{rg, error});
+                        stats_.frameErrors.emplace_back(vector<double>{(double)landmark.GetNumObservations() - 1, (double)i, rg, error});
+                    }
                 }
-            }
-            else
-            {
-                visualization_.AddTrack(obsPrev->GetKeypoint().pt, obs->GetKeypoint().pt, i);
+                else
+                {
+                    visualization_.AddTrack(obsPrev->GetKeypoint().pt, obs->GetKeypoint().pt, i);
+                }
             }
             stats_.trackLengths[i]++;
             numGood++;
@@ -156,13 +160,13 @@ void TrackingModule::Redetect()
     }
     int imsize = max(frames_.back()->GetImage().rows, frames_.back()->GetImage().cols);
     #pragma omp parallel for collapse(2)
-    for (int i = 0; i < rs_.size() - 1; i++)
+    for (int i = 0; i < feature::Region::rs.size() - 1; i++)
     {
-        for (int j = 0; j < ts_.size() - 1; j++)
+        for (int j = 0; j < feature::Region::ts.size() - 1; j++)
         {
             if (regionCount_.find({i, j}) == regionCount_.end() || regionCount_.at({i, j}) < minFeaturesRegion_)
             {
-                detector_->DetectInRadialRegion(*frames_.back(), landmarks_, rs_[i] * imsize, rs_[i+1] * imsize, ts_[j], ts_[j+1]);
+                detector_->DetectInRadialRegion(*frames_.back(), landmarks_, feature::Region::rs[i] * imsize, feature::Region::rs[i+1] * imsize, feature::Region::ts[j], feature::Region::ts[j+1]);
             }
         }
     }
@@ -171,9 +175,9 @@ void TrackingModule::Redetect()
 void TrackingModule::Prune()
 {
     #pragma omp parallel for collapse(2)
-    for (int i = 0; i < rs_.size() - 1; i++)
+    for (int i = 0; i < feature::Region::rs.size() - 1; i++)
     {
-        for (int j = 0; j < ts_.size() - 1; j++)
+        for (int j = 0; j < feature::Region::ts.size() - 1; j++)
         {
             if (regionCount_.find({i, j}) != regionCount_.end() && regionCount_.at({i, j}) > maxFeaturesRegion_)
             {
@@ -199,6 +203,11 @@ std::vector<data::Landmark>& TrackingModule::GetLandmarks()
 std::vector<std::unique_ptr<data::Frame>>& TrackingModule::GetFrames()
 {
     return frames_;
+}
+
+const data::Frame* TrackingModule::GetLastKeyframe()
+{
+    return lastKeyframe_;
 }
 
 TrackingModule::Stats& TrackingModule::GetStats()

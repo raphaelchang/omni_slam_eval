@@ -37,6 +37,11 @@ const cv::Mat& Feature::GetDescriptor() const
     return descriptor_;
 }
 
+void Feature::SetDescriptor(const cv::Mat& descriptor)
+{
+    descriptor_ = descriptor.clone();
+}
+
 Vector3d Feature::GetBearing() const
 {
     Vector3d cameraFramePt;

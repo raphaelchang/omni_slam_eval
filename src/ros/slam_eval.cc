@@ -31,7 +31,7 @@ void SLAMEval::InitPublishers()
 void SLAMEval::ProcessFrame(unique_ptr<data::Frame> &&frame)
 {
     trackingModule_->Update(frame);
-    odometryModule_->Update(trackingModule_->GetLandmarks(), trackingModule_->GetFrames());
+    odometryModule_->Update(trackingModule_->GetLandmarks(), trackingModule_->GetFrames().back(), trackingModule_->GetLastKeyframe());
     reconstructionModule_->Update(trackingModule_->GetLandmarks());
     if (baSlidingWindow_ > 0 && baSlidingInterval_ > 0 && (frameNum_ + 1) % baSlidingInterval_ == 0)
     {

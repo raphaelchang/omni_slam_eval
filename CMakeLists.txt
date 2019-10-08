@@ -5,7 +5,7 @@ project(omni_slam_eval)
 set(CMAKE_VERBOSE_MAKEFILE FALSE)
 
 if (NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
 endif (NOT CMAKE_BUILD_TYPE)
 
 # find catkin dependencies
@@ -65,6 +65,7 @@ add_library(omni_slam_eval_lib
   src/data/landmark.cc
   src/feature/tracker.cc
   src/feature/lk_tracker.cc
+  src/feature/descriptor_tracker.cc
   src/feature/detector.cc
   src/feature/matcher.cc
   src/reconstruction/triangulator.cc

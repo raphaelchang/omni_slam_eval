@@ -46,6 +46,10 @@ int LKTracker::DoTrack(std::vector<data::Landmark> &landmarks, data::Frame &cur_
             origKpt.push_back(feat->GetKeypoint());
             origInx.push_back(i);
         }
+        if (!stereo)
+        {
+            continue;
+        }
         if (cur_frame.HasStereoImage() && !keyframeStereoImg_.empty())
         {
             const data::Feature *stereoFeat = landmark.GetStereoObservationByFrameID(keyframeId_);
@@ -142,7 +146,7 @@ int LKTracker::DoTrack(std::vector<data::Landmark> &landmarks, data::Frame &cur_
         if (stereoStatus[i] == 1 && stereoErr[i] <= errThresh_)
         {
             cv::KeyPoint kpt(stereoResults[i], stereoOrigKpt[i].size);
-            data::Feature feat(cur_frame, kpt);
+            data::Feature feat(cur_frame, kpt, true);
             landmark.AddStereoObservation(feat);
         }
     }

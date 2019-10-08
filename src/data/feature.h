@@ -22,6 +22,8 @@ public:
     const cv::KeyPoint& GetKeypoint() const;
     const cv::Mat& GetDescriptor() const;
 
+    void SetDescriptor(const cv::Mat& descriptor);
+
     Vector3d GetBearing() const;
     Vector3d GetWorldPoint();
     Vector3d GetEstimatedWorldPoint();

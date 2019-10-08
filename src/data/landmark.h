@@ -28,7 +28,9 @@ public:
     const int GetFirstFrameID() const;
     const int GetNumObservations() const;
     const Feature* GetObservationByFrameID(const int frame_id) const;
+    Feature* GetObservationByFrameID(const int frame_id);
     const Feature* GetStereoObservationByFrameID(const int frame_id) const;
+    Feature* GetStereoObservationByFrameID(const int frame_id);
     void SetEstimatedPosition(const Vector3d &pos, const std::vector<int> &frame_ids);
     void SetEstimatedPosition(const Vector3d &pos);
 

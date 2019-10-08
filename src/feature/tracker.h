@@ -25,6 +25,7 @@ protected:
     int keyframeId_;
     int prevId_;
     const data::Frame *prevFrame_;
+    const data::Frame *keyframe_;
 
 private:
     virtual int DoTrack(std::vector<data::Landmark> &landmarks, data::Frame &cur_frame, std::vector<double> &errors, bool stereo) = 0;

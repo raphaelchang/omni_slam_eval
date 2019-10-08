@@ -29,7 +29,7 @@ public:
     OdometryModule(std::unique_ptr<odometry::PoseEstimator> &pose_estimator, std::unique_ptr<optimization::BundleAdjuster> &bundle_adjuster);
     OdometryModule(std::unique_ptr<odometry::PoseEstimator> &&pose_estimator, std::unique_ptr<optimization::BundleAdjuster> &&bundle_adjuster);
 
-    void Update(std::vector<data::Landmark> &landmarks, std::vector<std::unique_ptr<data::Frame>> &frames);
+    void Update(std::vector<data::Landmark> &landmarks, std::unique_ptr<data::Frame> &cur_frame, const data::Frame *keyframe);
     void BundleAdjust(std::vector<data::Landmark> &landmarks);
 
     Stats& GetStats();

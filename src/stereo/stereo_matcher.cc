@@ -32,6 +32,7 @@ int StereoMatcher::Match(data::Frame &frame, std::vector<data::Landmark> &landma
         return 0;
     }
     std::vector<cv::KeyPoint> pointsToMatch;
+    std::vector<cv::Mat> descriptors;
     std::vector<Vector3d> bearings1;
     std::vector<int> origInx;
     for (int i = 0; i < landmarks.size(); i++)
@@ -45,6 +46,7 @@ int StereoMatcher::Match(data::Frame &frame, std::vector<data::Landmark> &landma
         if (feat != nullptr)
         {
             pointsToMatch.push_back(feat->GetKeypoint());
+            descriptors.push_back(feat->GetDescriptor());
             bearings1.push_back(util::TFUtil::WorldFrameToCameraFrame(feat->GetBearing().normalized()));
             origInx.push_back(i);
         }
@@ -66,7 +68,7 @@ int StereoMatcher::Match(data::Frame &frame, std::vector<data::Landmark> &landma
     {
         int inx = *it;
         Vector3d &bearing1 = bearings1[inx];
-        data::Feature feat(frame, matchedPoints[inx], true);
+        data::Feature feat(frame, matchedPoints[inx], descriptors[inx], true);
         Vector3d bearing2 = util::TFUtil::WorldFrameToCameraFrame(feat.GetBearing().normalized());
 
         RowVector3d epiplane1 = bearing2.transpose() * E;

@@ -23,7 +23,7 @@ FivePoint::FivePoint(int ransac_iterations, double epipolar_threshold, int trans
 {
 }
 
-int FivePoint::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &cur_frame, data::Frame &prev_frame, std::vector<int> &inlier_indices) const
+int FivePoint::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &cur_frame, const data::Frame &prev_frame, std::vector<int> &inlier_indices) const
 {
     Matrix3d E;
     int inliers = ComputeE(landmarks, prev_frame, cur_frame, E, inlier_indices);

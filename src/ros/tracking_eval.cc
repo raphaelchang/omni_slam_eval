@@ -1,6 +1,7 @@
 #include "tracking_eval.h"
 
 #include "feature/lk_tracker.h"
+#include "feature/descriptor_tracker.h"
 #include "feature/detector.h"
 #include "odometry/five_point.h"
 
@@ -16,40 +17,65 @@ TrackingEval<Stereo>::TrackingEval(const ::ros::NodeHandle &nh, const ::ros::Nod
     : EvalBase<Stereo>(nh, nh_private)
 {
     string detectorType;
+    string descriptorType;
     int trackerWindowSize;
     int trackerNumScales;
-    int trackerTemplateUpdateRate;
+    int keyframeInterval;
     double fivePointThreshold;
     int fivePointRansacIterations;
     double trackerDeltaPixelErrorThresh;
     double trackerErrorThresh;
     map<string, double> detectorParams;
+    map<string, double> descriptorParams;
     int minFeaturesRegion;
     int maxFeaturesRegion;
+    string trackerType;
 
     this->nhp_.param("detector_type", detectorType, string("GFTT"));
+    this->nhp_.param("descriptor_type", descriptorType, string("ORB"));
     this->nhp_.param("tracker_window_size", trackerWindowSize, 128);
     this->nhp_.param("tracker_num_scales", trackerNumScales, 4);
     this->nhp_.param("tracker_checker_epipolar_threshold", fivePointThreshold, 0.01745240643);
     this->nhp_.param("tracker_checker_iterations", fivePointRansacIterations, 1000);
     this->nhp_.param("tracker_delta_pixel_error_threshold", trackerDeltaPixelErrorThresh, 5.0);
     this->nhp_.param("tracker_error_threshold", trackerErrorThresh, 20.);
-    this->nhp_.param("tracker_template_update_rate", trackerTemplateUpdateRate, 1);
     this->nhp_.param("min_features_per_region", minFeaturesRegion, 5);
     this->nhp_.param("max_features_per_region", maxFeaturesRegion, 5000);
     this->nhp_.getParam("detector_parameters", detectorParams);
+    this->nhp_.getParam("descriptor_parameters", descriptorParams);
+    this->nhp_.param("keyframe_interval", keyframeInterval, 1);
+    this->nhp_.param("tracker_type", trackerType, string("lk"));
 
     unique_ptr<feature::Detector> detector;
     if (feature::Detector::IsDetectorTypeValid(detectorType))
     {
-        detector.reset(new feature::Detector(detectorType, detectorParams));
+        if (trackerType == "lk")
+        {
+            detector.reset(new feature::Detector(detectorType, detectorParams));
+        }
+        else if (trackerType == "descriptor")
+        {
+            detector.reset(new feature::Detector(detectorType, descriptorType, detectorParams, descriptorParams));
+        }
     }
     else
     {
         ROS_ERROR("Invalid feature detector specified");
     }
 
-    unique_ptr<feature::Tracker> tracker(new feature::LKTracker(trackerWindowSize, trackerNumScales, trackerDeltaPixelErrorThresh, trackerErrorThresh, trackerTemplateUpdateRate));
+    unique_ptr<feature::Tracker> tracker;
+    if (trackerType == "lk")
+    {
+        tracker.reset(new feature::LKTracker(trackerWindowSize, trackerNumScales, trackerDeltaPixelErrorThresh, trackerErrorThresh, keyframeInterval));
+    }
+    else if (trackerType == "descriptor")
+    {
+        tracker.reset(new feature::DescriptorTracker(detectorType, descriptorType, detectorParams, descriptorParams, trackerErrorThresh, keyframeInterval));
+    }
+    else
+    {
+        ROS_ERROR("Invalid tracker type specified");
+    }
 
     unique_ptr<odometry::FivePoint> checker(new odometry::FivePoint(fivePointRansacIterations, fivePointThreshold, 0, 0));
 

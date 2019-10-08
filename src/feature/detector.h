@@ -56,10 +56,10 @@ public:
     Detector(std::string detector_type, std::string descriptor_type, std::map<std::string, double> det_args, std::map<std::string, double> desc_args);
     Detector(const Detector &other);
 
-    int Detect(data::Frame &frame, std::vector<data::Landmark> &landmarks) const;
-    int DetectInRectangularRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, cv::Point2f start, cv::Point2f end) const;
-    int DetectInRadialRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, double start_r, double end_r, double start_t, double end_t) const;
-    int DetectInRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, cv::Mat &mask) const;
+    int Detect(data::Frame &frame, std::vector<data::Landmark> &landmarks, bool stereo = false) const;
+    int DetectInRectangularRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, cv::Point2f start, cv::Point2f end, bool stereo = false) const;
+    int DetectInRadialRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, double start_r, double end_r, double start_t, double end_t, bool stereo = false) const;
+    int DetectInRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, cv::Mat &mask, bool stereo = false) const;
 
     std::string GetDetectorType();
     std::string GetDescriptorType();

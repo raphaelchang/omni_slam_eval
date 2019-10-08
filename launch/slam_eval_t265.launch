@@ -29,15 +29,17 @@
             stereo_camera_parameters: $(arg stereo_camera_params)
             detector_type: 'GFTT'
             detector_parameters: {maxCorners: 5000, qualityLevel: 0.001, minDistance: 5, blockSize: 5}
+            keyframe_interval: 1
+            tracker_type: 'lk'
             tracker_window_size: 128
             tracker_num_scales: 4
             tracker_checker_epipolar_threshold: 0.008
             tracker_checker_iterations: 1000
             tracker_delta_pixel_error_threshold: 0.0
             tracker_error_threshold: 20.0
-            tracker_template_update_rate: 1
             min_features_per_region: 100
             max_features_per_region: 1000
+            odometry_type: 'pnp'
             pnp_inlier_threshold: 3.0
             pnp_iterations: 3000
             max_reprojection_error: 5.0

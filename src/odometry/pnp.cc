@@ -23,7 +23,7 @@ PNP::PNP(int ransac_iterations, double reprojection_threshold, int num_refine_th
 {
 }
 
-int PNP::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &cur_frame, data::Frame &prev_frame, std::vector<int> &inlier_indices) const
+int PNP::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &cur_frame, const data::Frame &prev_frame, std::vector<int> &inlier_indices) const
 {
     std::vector<Vector3d> xs;
     std::vector<Vector2d> yns;

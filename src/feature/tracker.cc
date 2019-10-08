@@ -16,6 +16,7 @@ void Tracker::Init(data::Frame &init_frame)
     frameNum_ = 0;
     prevId_ = init_frame.GetID();
     prevFrame_ = &init_frame;
+    keyframe_ = &init_frame;
     keyframeId_ = init_frame.GetID();
     keyframeImg_ = init_frame.GetImage().clone();
     if (init_frame.HasStereoImage())
@@ -26,7 +27,7 @@ void Tracker::Init(data::Frame &init_frame)
 
 const data::Frame* Tracker::GetLastKeyframe()
 {
-    return prevFrame_;
+    return keyframe_;
 }
 
 int Tracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_frame, std::vector<double> &errors, bool stereo)
@@ -43,6 +44,7 @@ int Tracker::Track(std::vector<data::Landmark> &landmarks, data::Frame &cur_fram
     prevFrame_ = &cur_frame;
     if (++frameNum_ % keyframeInterval_ == 0)
     {
+        keyframe_ = &cur_frame;
         keyframeId_ = cur_frame.GetID();
         keyframeImg_ = cur_frame.GetImage().clone();
         if (cur_frame.HasStereoImage())

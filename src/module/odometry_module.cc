@@ -18,13 +18,13 @@ OdometryModule::OdometryModule(std::unique_ptr<odometry::PoseEstimator> &&pose_e
 {
 }
 
-void OdometryModule::Update(std::vector<data::Landmark> &landmarks, std::vector<std::unique_ptr<data::Frame>> &frames)
+void OdometryModule::Update(std::vector<data::Landmark> &landmarks, std::unique_ptr<data::Frame> &cur_frame, const data::Frame *keyframe)
 {
     if (landmarks.size() == 0)
     {
         return;
     }
-    poseEstimator_->Compute(landmarks, *frames.back(), **next(frames.rbegin()));
+    poseEstimator_->Compute(landmarks, *cur_frame, *keyframe);
 }
 
 void OdometryModule::BundleAdjust(std::vector<data::Landmark> &landmarks)

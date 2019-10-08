@@ -425,21 +425,28 @@ Detector::Detector(const Detector &other)
 {
 }
 
-int Detector::Detect(data::Frame &frame, std::vector<data::Landmark> &landmarks) const
+int Detector::Detect(data::Frame &frame, std::vector<data::Landmark> &landmarks, bool stereo) const
 {
     cv::Mat noarr;
-    return DetectInRegion(frame, landmarks, noarr);
+    return DetectInRegion(frame, landmarks, noarr, stereo);
 }
 
-int Detector::DetectInRectangularRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, cv::Point2f start, cv::Point2f end) const
+int Detector::DetectInRectangularRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, cv::Point2f start, cv::Point2f end, bool stereo) const
 {
+    bool compressed = frame.IsCompressed();
     cv::Mat mask = cv::Mat::zeros(frame.GetImage().size(), CV_8U);
     mask(cv::Rect(start, end)) = 255;
-    return DetectInRegion(frame, landmarks, mask);
+    int count = DetectInRegion(frame, landmarks, mask, stereo);
+    if (compressed)
+    {
+        frame.CompressImages();
+    }
+    return count;
 }
 
-int Detector::DetectInRadialRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, double start_r, double end_r, double start_t, double end_t) const
+int Detector::DetectInRadialRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, double start_r, double end_r, double start_t, double end_t, bool stereo) const
 {
+    bool compressed = frame.IsCompressed();
     cv::Mat mask = cv::Mat::zeros(frame.GetImage().size(), CV_8U);
     for (int i = 0; i < mask.rows; i++)
     {
@@ -455,26 +462,32 @@ int Detector::DetectInRadialRegion(data::Frame &frame, std::vector<data::Landmar
             }
         }
     }
-    return DetectInRegion(frame, landmarks, mask);
+    int count = DetectInRegion(frame, landmarks, mask, stereo);
+    if (compressed)
+    {
+        frame.CompressImages();
+    }
+    return count;
 }
 
-int Detector::DetectInRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, cv::Mat &mask) const
+int Detector::DetectInRegion(data::Frame &frame, std::vector<data::Landmark> &landmarks, cv::Mat &mask, bool stereo) const
 {
     bool compressed = frame.IsCompressed();
     std::vector<cv::KeyPoint> kpts;
-    detector_->detect(frame.GetImage(), kpts, mask);
+    const cv::Mat &img = stereo ? frame.GetStereoImage() : frame.GetImage();
+    detector_->detect(img, kpts, mask);
     cv::Mat descs;
     if (descriptor_.get() != nullptr)
     {
         if (descriptorType_ == "LUCID")
         {
             cv::Mat rgb;
-            cv::cvtColor(frame.GetImage(), rgb, CV_GRAY2BGR);
+            cv::cvtColor(img, rgb, CV_GRAY2BGR);
             descriptor_->compute(rgb, kpts, descs);
         }
         else
         {
-            descriptor_->compute(frame.GetImage(), kpts, descs);
+            descriptor_->compute(img, kpts, descs);
         }
     }
     for (int i = 0; i < kpts.size(); i++)
@@ -484,13 +497,27 @@ int Detector::DetectInRegion(data::Frame &frame, std::vector<data::Landmark> &la
         if (descriptor_.get() != nullptr)
         {
             cv::Mat desc = descs.row(i);
-            data::Feature feat(frame, kpt, desc);
-            landmark.AddObservation(feat);
+            data::Feature feat(frame, kpt, desc, stereo);
+            if (stereo)
+            {
+                landmark.AddStereoObservation(feat);
+            }
+            else
+            {
+                landmark.AddObservation(feat);
+            }
         }
         else
         {
-            data::Feature feat(frame, kpt);
-            landmark.AddObservation(feat);
+            data::Feature feat(frame, kpt, stereo);
+            if (stereo)
+            {
+                landmark.AddStereoObservation(feat);
+            }
+            else
+            {
+                landmark.AddObservation(feat);
+            }
         }
         #pragma omp critical
         {
