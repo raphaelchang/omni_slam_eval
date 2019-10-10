@@ -127,6 +127,13 @@ int LKTracker::DoTrack(std::vector<data::Landmark> &landmarks, data::Frame &cur_
                 }
             }
         }
+        Vector2d pixelCur;
+        pixelCur << results[i].x, results[i].y;
+        Vector3d tmp;
+        if (!cur_frame.GetCameraModel().UnprojectToBearing(pixelCur, tmp))
+        {
+            continue;
+        }
         if (status[i] == 1 && err[i] <= errThresh_)
         {
             cv::KeyPoint kpt(results[i], origKpt[i].size);
