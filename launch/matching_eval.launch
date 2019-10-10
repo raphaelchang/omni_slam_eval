@@ -2,8 +2,7 @@
     <arg name="bag_file" default="" />
     <arg name="results_file" default="$(arg bag_file).matching.hdf5" />
     <arg name="rate" default="1" />
-    <arg name="camera_model" default="double_sphere" />
-    <arg name="camera_params" default="{fx: 1024, fy: 1024, cx: 512, cy: 512, chi: 0.0, alpha: 0.0}" />
+    <arg name="camera_file" default="$(find omni_slam_eval)/launch/default_camera.yaml" />
     <arg name="detector_type" default="ORB" />
     <arg name="detector_params" default="{nfeatures: 100}" />
     <arg name="descriptor_type" default="ORB" />
@@ -17,9 +16,8 @@
         <param name="pose_topic" value="/unity_ros/Sphere/TrueState/pose" />
         <param name="matched_image_topic" value="/omni_slam/matched" />
         <param name="rate" value="$(arg rate)" />
+        <rosparam command="load" file="$(arg camera_file)" />
         <rosparam subst_value="true">
-            camera_model: '$(arg camera_model)'
-            camera_parameters: $(arg camera_params)
             detector_type: '$(arg detector_type)'
             detector_parameters: $(arg detector_params)
             descriptor_type: '$(arg descriptor_type)'

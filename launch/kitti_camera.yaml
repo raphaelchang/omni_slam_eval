@@ -1,0 +1,15 @@
+camera_model: perspective
+
+camera_parameters:
+    fx: 721.5377
+    fy: 721.5377
+    cx: 609.5593
+    cy: 172.854
+
+stereo_camera_parameters:
+    fx: 721.5377
+    fy: 721.5377
+    cx: 609.5593
+    cy: 172.854
+    tf_t: [0.533, 0.005, -0.001]
+    tf_r: [0, 0, 0, 1.0]

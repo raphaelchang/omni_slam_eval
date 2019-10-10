@@ -1,9 +1,7 @@
 <launch>
     <arg name="bag_file" default="" />
     <arg name="results_file" default="$(arg bag_file).slam.hdf5" />
-    <arg name="camera_model" default="double_sphere" />
-    <arg name="camera_params" default="{fx: 313.533725, fy: 313.51138991, cx: 510.37735, cy: 514.419593, chi: -0.18065, alpha: 0.59186286}" />
-    <arg name="stereo_camera_params" default="{fx: 313.4386621, fy: 313.359903, cx: 505.72413717, cy: 510.5791992, chi: -0.17829397, alpha: 0.591774861}" />
+    <arg name="camera_file" default="$(find omni_slam_eval)/launch/tum_camera.yaml" />
     <arg name="rate" default="1" />
     <node pkg="omni_slam_eval" type="omni_slam_slam_eval_node" name="omni_slam_slam_eval_node" required="true" output="screen">
         <param name="bag_file" value="$(arg bag_file)" />
@@ -23,10 +21,8 @@
         <param name="stereo_matched_topic" value="/omni_slam/stereo_matched" />
         <param name="output_frame" value="map" />
         <param name="rate" value="$(arg rate)" />
+        <rosparam command="load" file="$(arg camera_file)" />
         <rosparam subst_value="true">
-            camera_model: '$(arg camera_model)'
-            camera_parameters: $(arg camera_params)
-            stereo_camera_parameters: $(arg stereo_camera_params)
             detector_type: 'ORB'
             detector_parameters: {nfeatures: 1000}
             descriptor_type: 'ORB'
@@ -55,8 +51,6 @@
             stereo_matcher_num_scales: 5
             stereo_matcher_error_threshold: 20
             stereo_matcher_epipolar_threshold: 0.008
-            stereo_tf_t: [0.1010976, 0.001878, 0.00117]
-            stereo_tf_r: [-0.0237542, 0.0002876, -0.0004555, 0.9997177]
         </rosparam>
     </node>
 </launch>

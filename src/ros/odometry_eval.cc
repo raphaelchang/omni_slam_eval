@@ -51,7 +51,11 @@ OdometryEval<Stereo>::OdometryEval(const ::ros::NodeHandle &nh, const ::ros::Nod
     }
     else if (odometryType == "five_point")
     {
-        poseEstimator.reset(new odometry::FivePoint(fivePointRansacIterations, fivePointThreshold, iterations, reprojThresh, numCeresThreads));
+        poseEstimator.reset(new odometry::FivePoint(fivePointRansacIterations, fivePointThreshold, iterations, reprojThresh, false, numCeresThreads));
+    }
+    else if (odometryType == "five_point_fixed_translation")
+    {
+        poseEstimator.reset(new odometry::FivePoint(fivePointRansacIterations, fivePointThreshold, iterations, reprojThresh, true, numCeresThreads));
     }
     else
     {

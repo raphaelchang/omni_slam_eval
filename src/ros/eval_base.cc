@@ -59,8 +59,8 @@ EvalBase<true>::EvalBase(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &n
     stereoT.reserve(3);
     std::vector<double> stereoR;
     stereoR.reserve(4);
-    nhp_.getParam("stereo_tf_t", stereoT);
-    nhp_.getParam("stereo_tf_r", stereoR);
+    nhp_.getParam("stereo_camera_parameters/tf_t", stereoT);
+    nhp_.getParam("stereo_camera_parameters/tf_r", stereoR);
     Quaterniond q(stereoR[3], stereoR[0], stereoR[1], stereoR[2]);
     Vector3d t(stereoT[0], stereoT[1], stereoT[2]);
     stereoPose_ = util::TFUtil::QuaternionTranslationToPoseMatrix(q, t);

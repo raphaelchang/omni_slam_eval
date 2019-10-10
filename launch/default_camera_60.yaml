@@ -1,0 +1,15 @@
+camera_model: perspective
+
+camera_parameters:
+    fx: 1024
+    fy: 1024
+    cx: 512
+    cy: 512
+
+stereo_camera_parameters:
+    fx: 1024
+    fy: 1024
+    cx: 512
+    cy: 512
+    tf_t: [2.0, 0.0, 0.0]
+    tf_r: [0.0, 0.0, 0.0, 1.0]

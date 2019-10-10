@@ -77,7 +77,7 @@ TrackingEval<Stereo>::TrackingEval(const ::ros::NodeHandle &nh, const ::ros::Nod
         ROS_ERROR("Invalid tracker type specified");
     }
 
-    unique_ptr<odometry::FivePoint> checker(new odometry::FivePoint(fivePointRansacIterations, fivePointThreshold, 0, 0));
+    unique_ptr<odometry::FivePoint> checker(new odometry::FivePoint(fivePointRansacIterations, fivePointThreshold, 0, false, 0));
 
     trackingModule_.reset(new module::TrackingModule(detector, tracker, checker, minFeaturesRegion, maxFeaturesRegion));
 }

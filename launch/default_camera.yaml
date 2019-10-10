@@ -1,0 +1,19 @@
+camera_model: double_sphere
+
+camera_parameters:
+    fx: 294.912
+    fy: 294.912
+    cx: 512
+    cy: 512
+    chi: 0.3
+    alpha: 0.6666667
+
+stereo_camera_parameters:
+    fx: 294.912
+    fy: 294.912
+    cx: 512
+    cy: 512
+    chi: 0.3
+    alpha: 0.6666667
+    tf_t: [2.0, 0.0, 0.0]
+    tf_r: [0.0, 0.0, 0.0, 1.0]

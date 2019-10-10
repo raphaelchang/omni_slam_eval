@@ -6,6 +6,7 @@
 #include <random>
 #include <ceres/ceres.h>
 #include "optimization/reprojection_error.h"
+#include "optimization/scale_parameterization.h"
 #include "camera/double_sphere.h"
 #include "camera/perspective.h"
 
@@ -14,11 +15,12 @@ namespace omni_slam
 namespace odometry
 {
 
-FivePoint::FivePoint(int ransac_iterations, double epipolar_threshold, int trans_ransac_iterations, double reprojection_threshold, int num_ceres_threads)
+FivePoint::FivePoint(int ransac_iterations, double epipolar_threshold, int trans_ransac_iterations, double reprojection_threshold, bool fix_translation_vector, int num_ceres_threads)
     : ransacIterations_(ransac_iterations),
     epipolarThreshold_(epipolar_threshold),
     transIterations_(trans_ransac_iterations),
     reprojectionThreshold_(reprojection_threshold),
+    fixTransVec_(fix_translation_vector),
     numCeresThreads_(num_ceres_threads)
 {
 }
@@ -74,25 +76,25 @@ int FivePoint::Compute(const std::vector<data::Landmark> &landmarks, data::Frame
             bestIds = ids;
         }
     }
+    Vector3d tvec = bestPose.block<3, 1>(0, 3);
+    Vector3d t = bestPose.block<3, 1>(0, 3);
     Matrix<double, 3, 4> estPose;
-    Vector3d t;
     if (prev_frame.HasEstimatedPose())
     {
         estPose = util::TFUtil::CombineTransforms(bestPose, prev_frame.GetEstimatedInversePose());
-        t = prev_frame.GetEstimatedInversePose().block<3, 1>(0, 3);
+        t = estPose.block<3, 1>(0, 3);
     }
     else if (prev_frame.HasPose())
     {
         estPose = util::TFUtil::CombineTransforms(bestPose, prev_frame.GetInversePose());
-        t = prev_frame.GetInversePose().block<3, 1>(0, 3);
+        t = estPose.block<3, 1>(0, 3);
     }
     else
     {
         estPose = bestPose;
-        t << 0, 0, 0;
     }
     std::vector<int> transInliers;
-    inliers = ComputeTranslation(bestXs, bestFeats, util::TFUtil::GetRotationFromPoseMatrix(estPose), t, transInliers);
+    inliers = ComputeTranslation(bestXs, bestFeats, util::TFUtil::GetRotationFromPoseMatrix(estPose), t, tvec, transInliers);
     std::vector<int> transInlierIds;
     transInlierIds.reserve(inliers);
     for (int i : transInliers)
@@ -303,9 +305,9 @@ void FivePoint::EssentialToPoses(const Matrix3d &E, std::vector<Matrix3d> &rs, s
     ts.emplace_back(-UWtVt.transpose() * U.col(2));
 }
 
-int FivePoint::ComputeTranslation(const std::vector<Vector3d> &xs, const std::vector<std::pair<const data::Feature*, const data::Feature*>> &ys, const Matrix3d &R, Vector3d &t, std::vector<int> &inlier_indices) const
+int FivePoint::ComputeTranslation(const std::vector<Vector3d> &xs, const std::vector<std::pair<const data::Feature*, const data::Feature*>> &ys, const Matrix3d &R, Vector3d &t, const Vector3d &tvec, std::vector<int> &inlier_indices) const
 {
-    int inliers = TranslationRANSAC(xs, ys, R, t);
+    int inliers = TranslationRANSAC(xs, ys, R, t, tvec);
     inlier_indices = GetTranslationInlierIndices(xs, ys, R, t);
     std::vector<Vector3d> xs_inliers;
     std::vector<std::pair<const data::Feature*, const data::Feature*>> ys_inliers;
@@ -316,11 +318,11 @@ int FivePoint::ComputeTranslation(const std::vector<Vector3d> &xs, const std::ve
         xs_inliers.push_back(xs[inx]);
         ys_inliers.push_back(ys[inx]);
     }
-    OptimizeTranslation(xs_inliers, ys_inliers, R, t);
+    OptimizeTranslation(xs_inliers, ys_inliers, R, t, tvec);
     return inliers;
 }
 
-int FivePoint::TranslationRANSAC(const std::vector<Vector3d> &xs, const std::vector<std::pair<const data::Feature*, const data::Feature*>> &ys, const Matrix3d &R, Vector3d &t) const
+int FivePoint::TranslationRANSAC(const std::vector<Vector3d> &xs, const std::vector<std::pair<const data::Feature*, const data::Feature*>> &ys, const Matrix3d &R, Vector3d &t, const Vector3d &tvec) const
 {
     int bestInliers = 0;
     std::random_device rd;
@@ -340,7 +342,7 @@ int FivePoint::TranslationRANSAC(const std::vector<Vector3d> &xs, const std::vec
         std::vector<Vector3d> x{xs[indices[i]]};
         std::vector<std::pair<const data::Feature*, const data::Feature*>> y{ys[indices[i]]};
         Vector3d tmpT = t;
-        if (OptimizeTranslation(x, y, R, tmpT))
+        if (OptimizeTranslation(x, y, R, tmpT, tvec))
         {
             int inliers = GetTranslationInlierIndices(xs, ys, R, tmpT).size();
             #pragma omp critical
@@ -356,7 +358,7 @@ int FivePoint::TranslationRANSAC(const std::vector<Vector3d> &xs, const std::vec
     return bestInliers;
 }
 
-bool FivePoint::OptimizeTranslation(const std::vector<Vector3d> &xs, const std::vector<std::pair<const data::Feature*, const data::Feature*>> &ys, const Matrix3d &R, Vector3d &t) const
+bool FivePoint::OptimizeTranslation(const std::vector<Vector3d> &xs, const std::vector<std::pair<const data::Feature*, const data::Feature*>> &ys, const Matrix3d &R, Vector3d &t, const Vector3d &tvec) const
 {
     ceres::Problem problem;
     ceres::LossFunction *loss_function = nullptr;
@@ -385,8 +387,12 @@ bool FivePoint::OptimizeTranslation(const std::vector<Vector3d> &xs, const std::
         {
             problem.AddResidualBlock(cost_function, loss_function, &quatData[0], &tData[0], &landmarks[landmarks.size() - 3]);
             problem.SetParameterBlockConstant(&landmarks[landmarks.size() - 3]);
-            problem.SetParameterBlockConstant(&quatData[0]);
         }
+    }
+    problem.SetParameterBlockConstant(&quatData[0]);
+    if (fixTransVec_)
+    {
+        problem.SetParameterization(&tData[0], optimization::ScaleParameterization<3>::Create(tvec));
     }
     ceres::Solver::Options options;
     options.max_num_iterations = 100;
