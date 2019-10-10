@@ -60,6 +60,8 @@ void SLAMEval::Finish()
 
 void SLAMEval::GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data)
 {
+    OdometryEval<true>::GetResultsData(data);
+    ReconstructionEval<true>::GetResultsData(data);
 }
 
 void SLAMEval::Visualize(cv_bridge::CvImagePtr &base_img)

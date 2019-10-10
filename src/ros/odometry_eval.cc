@@ -113,6 +113,25 @@ template <bool Stereo>
 void OdometryEval<Stereo>::GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data)
 {
     module::OdometryModule::Stats &stats = odometryModule_->GetStats();
+    bool first = true;
+    for (const std::unique_ptr<data::Frame> &frame : this->trackingModule_->GetFrames())
+    {
+        if (frame->HasEstimatedPose() || first)
+        {
+            const Matrix<double, 3, 4> &pose = (first && !frame->HasEstimatedPose()) ? frame->GetPose() : frame->GetEstimatedPose();
+            Quaterniond quat(pose.block<3, 3>(0, 0));
+            quat.normalize();
+            data["estimated_poses"].emplace_back(std::vector<double>{pose(0, 3), pose(1, 3), pose(2, 3), quat.x(), quat.y(), quat.z(), quat.w()});
+        }
+        if (frame->HasPose())
+        {
+            const Matrix<double, 3, 4> &pose = frame->GetPose();
+            Quaterniond quat(pose.block<3, 3>(0, 0));
+            quat.normalize();
+            data["ground_truth_poses"].emplace_back(std::vector<double>{pose(0, 3), pose(1, 3), pose(2, 3), quat.x(), quat.y(), quat.z(), quat.w()});
+        }
+        first = false;
+    }
 }
 
 template <bool Stereo>
