@@ -7,6 +7,8 @@ from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns
 import argparse
 import os
+import sklearn.metrics
+import random
 
 parser = argparse.ArgumentParser(description='Plot matching evaluation results')
 parser.add_argument('results_path',  help='matching results file, source bag file, or working directory')
@@ -76,10 +78,77 @@ if not os.path.isdir(args.results_path) and args.results_path.endswith('.hdf5'):
     ax3.set_zlim([0, maxz])
     ax3.view_init(elev=100, azim=270)
 
-    ax4.set_title('Distribution of matches over changes in radial distance')
-    ax4.set_ylabel('Number of matches')
+    # ax4.set_title('Distribution of matches over changes in radial distance')
+    # ax4.set_ylabel('Number of matches')
+    # ax4.set_xlabel('Delta radial distance')
+    # ax4.hist(good_radial_distances[:, 0].ravel(), color='c')
+
+    # match_dict = [[] for i in range(10)]
+    # for row in good_radial_distances:
+        # r = int(min(row[0], 0.499999) / 0.05)
+        # match_dict[r].append((row[1], 0))
+    # for row in bad_radial_distances:
+        # r = int(min(row[0], 0.499999) / 0.05)
+        # match_dict[r].append((row[1], 1))
+    # si_bins = [0] * 10
+    # for r in range(len(match_dict)):
+        # match_dict[r] = sorted(match_dict[r], key=lambda x: x[0])
+        # if len(match_dict[r]) <= 1:
+            # si_bins[r] = 1
+            # continue
+        # good_nn = 0
+        # for i in range(len(match_dict[r])):
+            # if i == 0:
+                # if match_dict[r][i][1] == match_dict[r][i + 1]:
+                    # good_nn += 1
+            # elif i == len(match_dict[r]) - 1:
+                # if match_dict[r][i][1] == match_dict[r][i - 1]:
+                    # good_nn += 1
+            # else:
+                # if match_dict[r][i][0] - match_dict[r][i - 1][0] > match_dict[r][i + 1][0] - match_dict[r][i][0]:
+                    # if match_dict[r][i + 1][1] == match_dict[r][i][1]:
+                        # good_nn += 1
+                # else:
+                    # if match_dict[r][i][1] == match_dict[r][i - 1][1]:
+                        # good_nn += 1
+        # si_bins[r] = good_nn / float(len(match_dict[r]))
+    # ax4.plot([i for i in range(0, len(match_dict))], [si_bins[i] for i in range(0, len(match_dict))])
+
+    ax4.set_title('Match separability over changes in radial distance')
+    ax4.set_ylabel('Silhouette coefficient')
     ax4.set_xlabel('Delta radial distance')
-    ax4.hist(good_radial_distances[:, 0].ravel(), color='c')
+    num_bins = 50
+    num_samples = 5000
+    sr = [0 for i in range(num_bins)]
+    X_good = [np.array([]) for i in range(num_bins)]
+    labels_good = [np.array([]) for i in range(num_bins)]
+    X_bad = [np.array([]) for i in range(num_bins)]
+    labels_bad = [np.array([]) for i in range(num_bins)]
+    valid_good = [False for i in range(num_bins)]
+    valid_bad = [False for i in range(num_bins)]
+    valid = [False for i in range(num_bins)]
+    for row in good_radial_distances:
+        r = int(min(row[0], 0.499999) / (0.5 / num_bins))
+        X_good[r] = np.append(X_good[r], row[1])
+        labels_good[r] = np.append(labels_good[r], 0)
+        valid_good[r] = True
+    for row in bad_radial_distances:
+        r = int(min(row[0], 0.499999) / (0.5 / num_bins))
+        X_bad[r] = np.append(X_bad[r], row[1])
+        labels_bad[r] = np.append(labels_bad[r], 1)
+        valid_bad[r] = True
+    for i in range(num_bins):
+        valid[i] = valid_good[i] and valid_bad[i]
+        if not valid[i]:
+            continue
+        idx_good = np.arange(len(X_good[i]))
+        idx_bad = np.arange(len(X_bad[i]))
+        if len(X_good[i]) > num_samples:
+            idx_good = np.random.choice(np.arange(len(X_good[i])), num_samples, replace=False)
+        if len(X_bad[i]) > num_samples:
+            idx_bad = np.random.choice(np.arange(len(X_bad[i])), num_samples, replace=False)
+        sr[i] = sklearn.metrics.silhouette_score(np.concatenate((X_good[i][idx_good], X_bad[i][idx_bad])).reshape(-1, 1), np.concatenate((labels_good[i][idx_good], labels_bad[i][idx_bad])), metric = 'l1')
+    ax4.plot([i * 0.5 / num_bins + 0.5 / num_bins / 2 for i in range(0, len(sr)) if valid[i]], [sr[i] for i in range(0, len(sr)) if valid[i]])
 
     df = pd.DataFrame({'Delta radial distance': ['{}-{}'.format(r * 0.05, (r + 1) * 0.05) for r in (np.minimum(np.hstack((good_radial_distances[:, 0], bad_radial_distances[:, 0])), 0.499999) / 0.05).astype(int)], 'Descriptor distance': np.hstack((good_radial_distances[:, 1], bad_radial_distances[:, 1])), 'Match': ['Good' for i in range(len(good_radial_distances))] + ['Bad' for i in range(len(bad_radial_distances))]})
     sns.violinplot(x="Delta radial distance", y="Descriptor distance", hue="Match", data=df, split=True, ax=ax5, palette="Set2", inner="quart")
@@ -142,6 +211,7 @@ elif not os.path.isdir(args.results_path) and args.results_path.endswith('.bag')
         ax2.set_prop_cycle(color=[cm(1. * i / len(detdesclist)) for i in range(len(detdesclist))])
         ax3.set_prop_cycle(color=[cm(1. * i / len(detdesclist)) for i in range(len(detdesclist))])
         ax4.set_prop_cycle(color=[cm(1. * i / len(detdesclist)) for i in range(len(detdesclist))])
+        ax6.set_prop_cycle(color=[cm(1. * i / len(detdesclist)) for i in range(len(detdesclist))])
 
         handles = []
         for detdesc in detdesclist:
@@ -202,6 +272,49 @@ elif not os.path.isdir(args.results_path) and args.results_path.endswith('.bag')
         handles, labels = ax5.get_legend_handles_labels()
         ax5.legend(handles=handles[0:], labels=labels[0:], fontsize='small')
         ax5.set_title('Distribution of good and bad matches over descriptor distances')
+
+        ax6.set_title('Match separability over changes in radial distance')
+        ax6.set_ylabel('Silhouette coefficient')
+        ax6.set_xlabel('Delta radial distance')
+        handles = []
+        for detdesc in detdesclist:
+            num_bins = 50
+            num_samples = 1000
+            sr = [0 for i in range(num_bins)]
+            X_good = [np.array([]) for i in range(num_bins)]
+            labels_good = [np.array([]) for i in range(num_bins)]
+            X_bad = [np.array([]) for i in range(num_bins)]
+            labels_bad = [np.array([]) for i in range(num_bins)]
+            valid_good = [False for i in range(num_bins)]
+            valid_bad = [False for i in range(num_bins)]
+            valid = [False for i in range(num_bins)]
+            for row in good_radial_distances[detdesc]:
+                r = int(min(row[0], 0.499999) / (0.5 / num_bins))
+                X_good[r] = np.append(X_good[r], row[1])
+                labels_good[r] = np.append(labels_good[r], 0)
+                valid_good[r] = True
+            for row in bad_radial_distances[detdesc]:
+                r = int(min(row[0], 0.499999) / (0.5 / num_bins))
+                X_bad[r] = np.append(X_bad[r], row[1])
+                labels_bad[r] = np.append(labels_bad[r], 1)
+                valid_bad[r] = True
+            for i in range(num_bins):
+                valid[i] = valid_good[i] and valid_bad[i]
+                if not valid[i]:
+                    continue
+                idx_good = np.arange(len(X_good[i]))
+                idx_bad = np.arange(len(X_bad[i]))
+                if len(X_good[i]) > num_samples:
+                    idx_good = np.random.choice(np.arange(len(X_good[i])), num_samples, replace=False)
+                if len(X_bad[i]) > num_samples:
+                    idx_bad = np.random.choice(np.arange(len(X_bad[i])), num_samples, replace=False)
+                sr[i] = sklearn.metrics.silhouette_score(np.concatenate((X_good[i][idx_good], X_bad[i][idx_bad])).reshape(-1, 1), np.concatenate((labels_good[i][idx_good], labels_bad[i][idx_bad])), metric = 'l1')
+                # sr[i] = sklearn.metrics.davies_bouldin_score(X[i].reshape(-1, 1), labels[i])
+            color = next(ax6._get_lines.prop_cycler)['color']
+            h, = ax6.plot([i * 0.5 / num_bins + 0.5 / num_bins / 2 for i in range(0, len(sr)) if valid[i]], [sr[i] for i in range(0, len(sr)) if valid[i]], color=color)
+            handles.append(h)
+        l1 = ax6.legend(handles, ['{}+{}'.format(det, desc) for det, desc in detdesclist], loc=1, title='Detector+Descriptor', fontsize='small')
+        ax6.add_artist(l1)
 
         plt.show()
 
