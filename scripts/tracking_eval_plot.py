@@ -107,22 +107,31 @@ elif os.path.isdir(args.results_path):
     motion_count = 0
     fov_dict = dict()
     last_fov_num = 0
+    fovs = []
+    for yaml in os.listdir(args.results_path):
+        if not os.path.isdir(os.path.join(args.results_path, yaml)) and yaml.endswith('.yaml'):
+            fov = os.path.splitext(os.path.basename(yaml))[0]
+            fovs.append(fov)
+    fovs.sort(key=int)
     for motion in os.listdir(args.results_path):
         if os.path.isdir(os.path.join(args.results_path, motion)):
             bag_dir = os.path.join(args.results_path, motion)
-            motion_count += 1
-            for fov in os.listdir(bag_dir):
-                if os.path.isdir(os.path.join(bag_dir, fov)):
-                    for filename in os.listdir(os.path.join(bag_dir, fov)):
-                        if filename.endswith('.tracking.hdf5'):
-                            results_file = os.path.join(bag_dir, fov, filename)
-                            with h5py.File(results_file, 'r') as f:
-                                attrs = dict(f['attributes'].attrs.items())
-                                fov = int(round(attrs['fov']))
-                                if fov not in fov_dict.keys():
-                                    fov_dict[fov] = last_fov_num
-                                    last_fov_num += 1
-                                break
+            motion_exists = False
+            for fovstr in fovs:
+                for filename in os.listdir(bag_dir):
+                    if filename.endswith(fovstr + '.tracking.hdf5'):
+                        results_file = os.path.join(bag_dir, filename)
+                        with h5py.File(results_file, 'r') as f:
+                            attrs = dict(f['attributes'].attrs.items())
+                            # fov = int(round(attrs['fov']))
+                            fov = int(fovstr)
+                            if fov not in fov_dict.keys():
+                                fov_dict[fov] = last_fov_num
+                                last_fov_num += 1
+                            motion_exists = True
+                            break
+            if motion_exists:
+                motion_count += 1
 
     last_fov_num = 0
     for fov in sorted(fov_dict.keys()):
@@ -136,46 +145,48 @@ elif os.path.isdir(args.results_path):
         if os.path.isdir(os.path.join(args.results_path, motion)):
             df = pandas.DataFrame()
             bag_dir = os.path.join(args.results_path, motion)
-            for fov in os.listdir(bag_dir):
-                if os.path.isdir(os.path.join(bag_dir, fov)):
-                    chi, alpha, fx, fy, cx, cy = parse('chi{:f}_alpha{:f}_fx{:f}_fy{:f}_cx{:f}_cy{:f}', fov)
-                    failures = np.empty(shape=(1,0))
-                    radial_errors = np.empty(shape=(0,2))
-                    track_lengths = np.empty(shape=(1,0))
-                    file_exists = False
-                    for filename in os.listdir(os.path.join(bag_dir, fov)):
-                        if filename.endswith('.tracking.hdf5'):
-                            results_file = os.path.join(bag_dir, fov, filename)
-                            with h5py.File(results_file, 'r') as f:
-                                failures = np.hstack((failures, f['failures'][:]))
-                                radial_errors = np.vstack((radial_errors, f['radial_errors'][:]))
-                                tl = f['track_lengths'][:]
-                                track_lengths = np.hstack((track_lengths, tl[:, tl[0, :] > 0]))
-                                attrs = dict(f['attributes'].attrs.items())
-                                file_exists = True
-                                fov = int(round(attrs['fov']))
-                    if file_exists:
-                        ax = fig1.add_subplot(num_rows, num_cols, motion_inx * num_cols + fov_dict[fov] + 1)
-                        ax.hist([[r for r, e in radial_errors if e <= 5], [r for r, e in radial_errors if 5 < e <= 20], [r for r, e in radial_errors if 20 < e <= 50], [r for r in failures]], bins=[i * 0.05 for i in range(11)], alpha=0.5, label=['<5', '5-20', '20-50', 'Failures'], stacked=False)
-                        ax.legend(loc='best', title='Pixel error', fontsize='x-small')
+            motion_exists = False
+            for fovstr in fovs:
+                failures = np.empty(shape=(1,0))
+                radial_errors = np.empty(shape=(0,2))
+                track_lengths = np.empty(shape=(1,0))
+                file_exists = False
+                for filename in os.listdir(bag_dir):
+                    if filename.endswith(fovstr + '.tracking.hdf5'):
+                        results_file = os.path.join(bag_dir, filename)
+                        with h5py.File(results_file, 'r') as f:
+                            failures = np.hstack((failures, f['failures'][:]))
+                            radial_errors = np.vstack((radial_errors, f['radial_errors'][:]))
+                            tl = f['track_lengths'][:]
+                            track_lengths = np.hstack((track_lengths, tl[:, tl[0, :] > 0]))
+                            attrs = dict(f['attributes'].attrs.items())
+                            file_exists = True
+                            motion_exists = True
+                            # fov = int(round(attrs['fov']))
+                fov = int(fovstr)
+                if file_exists:
+                    ax = fig1.add_subplot(num_rows, num_cols, motion_inx * num_cols + fov_dict[fov] + 1)
+                    ax.hist([[r for r, e in radial_errors if e <= 5], [r for r, e in radial_errors if 5 < e <= 20], [r for r, e in radial_errors if 20 < e <= 50], [r for r in failures]], bins=[i * 0.05 for i in range(11)], alpha=0.5, label=['<5', '5-20', '20-50', 'Failures'], stacked=False)
+                    ax.legend(loc='best', title='Pixel error', fontsize='x-small')
 
-                        if motion_inx == 0:
-                            ax.set_title('FOV {} degrees'.format(fov))
-                        elif motion_inx == num_rows - 1:
-                            ax.set_xlabel('Radial distance')
-                        if fov_dict[fov] == 0:
-                            ax.set_ylabel(motion, size='large')
-                        elif fov_dict[fov] == num_cols - 1:
-                            ax.set_ylabel('Number of tracks')
-                            ax.yaxis.set_label_position("right")
+                    if motion_inx == 0:
+                        ax.set_title('FOV {} degrees'.format(fov))
+                    elif motion_inx == num_rows - 1:
+                        ax.set_xlabel('Radial distance')
+                    if fov_dict[fov] == 0:
+                        ax.set_ylabel(motion, size='large')
+                    elif fov_dict[fov] == num_cols - 1:
+                        ax.set_ylabel('Number of tracks')
+                        ax.yaxis.set_label_position("right")
 
-                        df = df.append(pandas.DataFrame({'FOV': [fov for i in range(len(track_lengths[0]))], 'Track lifetime (frames)': track_lengths[0, :]}))
-                    else:
-                        print '[WARNING] No results files found in directory {}'.format(os.path.join(bag_dir, fov))
-            ax2 = fig2.add_subplot(num_rows, 1, motion_inx + 1)
-            sns.violinplot(x='FOV', y='Track lifetime (frames)', data=df, ax=ax2, palette="muted", inner='quart')
-            ax2.set_title('Motion {}'.format(motion))
-            motion_inx += 1
+                    df = df.append(pandas.DataFrame({'FOV': [fov for i in range(len(track_lengths[0]))], 'Track lifetime (frames)': track_lengths[0, :]}))
+                else:
+                    print '[WARNING] No results files found in directory {} for FOV {}'.format(os.path.join(bag_dir), fovstr)
+            if motion_exists:
+                ax2 = fig2.add_subplot(num_rows, 1, motion_inx + 1)
+                sns.violinplot(x='FOV', y='Track lifetime (frames)', data=df, ax=ax2, palette="muted", inner='quart')
+                ax2.set_title('Motion {}'.format(motion))
+                motion_inx += 1
     plt.show()
 
 else:

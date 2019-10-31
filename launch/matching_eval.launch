@@ -1,22 +1,21 @@
 <launch>
     <arg name="bag_file" default="" />
-    <arg name="results_file" default="$(arg bag_file).matching.hdf5" />
-    <arg name="rate" default="1" />
-    <arg name="camera_file" default="$(find omni_slam_eval)/launch/default_camera.yaml" />
     <arg name="detector_type" default="ORB" />
     <arg name="detector_params" default="{nfeatures: 100}" />
     <arg name="descriptor_type" default="ORB" />
     <arg name="descriptor_params" default="{}" />
+    <arg name="camera_file" default="$(find omni_slam_eval)/launch/default_camera.yaml" />
+    <arg name="results_file" default="$(eval ''.join(arg('bag_file').split('.')[:-1]) + '.' + ''.join(arg('camera_file').split('/')[-1].split('.')[:-1]) + '.' + arg('detector_type') + '_' + arg('descriptor_type') + '.matching.hdf5')" />
+    <arg name="rate" default="1" />
     <arg name="matcher_thresh" default="0" />
     <node pkg="omni_slam_eval" type="omni_slam_matching_eval_node" name="omni_slam_matching_eval_node" required="true" output="screen">
         <param name="bag_file" value="$(arg bag_file)" />
         <param name="results_file" value="$(arg results_file)" />
-        <param name="image_topic" value="/unity_ros/Sphere/FisheyeCamera/image_raw" />
-        <param name="depth_image_topic" value="/unity_ros/Sphere/FisheyeDepthCamera/image_raw" />
-        <param name="pose_topic" value="/unity_ros/Sphere/TrueState/pose" />
+        <param name="image_topic" value="/unity_ros/Camera/FisheyeCamera/image_raw" />
+        <param name="depth_image_topic" value="/unity_ros/Camera/FisheyeDepthCamera/image_raw" />
+        <param name="pose_topic" value="/unity_ros/Camera/TrueState/pose" />
         <param name="matched_image_topic" value="/omni_slam/matched" />
         <param name="rate" value="$(arg rate)" />
-        <rosparam command="load" file="$(arg camera_file)" />
         <rosparam subst_value="true">
             detector_type: '$(arg detector_type)'
             detector_parameters: $(arg detector_params)
@@ -27,4 +26,5 @@
             feature_distance_threshold: 10
         </rosparam>
     </node>
+    <rosparam command="load" file="$(arg camera_file)" ns="omni_slam_matching_eval_node" />
 </launch>

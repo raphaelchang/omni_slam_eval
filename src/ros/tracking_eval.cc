@@ -102,6 +102,8 @@ void TrackingEval<Stereo>::ProcessFrame(unique_ptr<data::Frame> &&frame)
 {
     trackingModule_->Update(frame);
     trackingModule_->Redetect();
+
+    visualized_ = false;
 }
 
 template <bool Stereo>

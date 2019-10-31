@@ -17,25 +17,29 @@ if os.path.isdir(args.working_dir):
     print '==========================================='
     print 'Full motion+FOV dataset tracking evaluation'
     print '==========================================='
+    fovs = []
+    for yaml in os.listdir(args.working_dir):
+        if not os.path.isdir(os.path.join(args.working_dir, yaml)) and yaml.endswith('.yaml'):
+            fov = os.path.splitext(os.path.basename(yaml))[0]
+            fovs.append(fov)
+    fovs.sort(key=int)
     for motion in os.listdir(args.working_dir):
         if os.path.isdir(os.path.join(args.working_dir, motion)):
             bag_dir = os.path.join(args.working_dir, motion)
-            for fov in os.listdir(bag_dir):
-                if os.path.isdir(os.path.join(bag_dir, fov)):
-                    chi, alpha, fx, fy, cx, cy = parse('chi{:f}_alpha{:f}_fx{:f}_fy{:f}_cx{:f}_cy{:f}', fov)
-                    printstr = "Motion type {}, chi={}, alpha={}, fx={}, fy={}, cx={}, cy={}".format(motion, chi, alpha, fx, fy, cx, cy)
-                    print ''
-                    print '-' * len(printstr)
-                    print printstr
-                    print '-' * len(printstr)
-                    print ''
-                    fov_dir = os.path.join(bag_dir, fov)
-                    for filename in os.listdir(fov_dir):
-                        if filename.endswith('.bag') and not filename.endswith('.orig.bag'):
-                            bag_file = os.path.abspath(os.path.join(fov_dir, filename))
-                            sys.argv = ['roslaunch', 'omni_slam_eval', 'tracking_eval.launch', 'bag_file:={}'.format(bag_file), 'results_file:={}.tracking.hdf5'.format(bag_file), 'camera_params:={{fx: {}, fy: {}, cx: {}, cy: {}, chi: {}, alpha: {}}}'.format(fx, fy, cx, cy, chi, alpha), 'rate:={}'.format(args.rate)]
-                            reload(roslaunch)
-                            roslaunch.main()
+            for fov in fovs:
+                printstr = "Motion type {}, FOV {}".format(motion, fov)
+                print ''
+                print '-' * len(printstr)
+                print printstr
+                print '-' * len(printstr)
+                print ''
+                fov_file = os.path.join(args.working_dir, fov + '.yaml')
+                for filename in os.listdir(bag_dir):
+                    if filename.endswith('.bag') and not filename.endswith('.orig.bag'):
+                        bag_file = os.path.abspath(os.path.join(bag_dir, filename))
+                        sys.argv = ['roslaunch', 'omni_slam_eval', 'tracking_eval.launch', 'bag_file:={}'.format(bag_file), 'camera_file:={}'.format(fov_file), 'rate:={}'.format(args.rate)]
+                        reload(roslaunch)
+                        roslaunch.main()
     print ''
     print '==================='
     print 'Evaluation complete'
