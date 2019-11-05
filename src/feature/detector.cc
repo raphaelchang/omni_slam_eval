@@ -157,7 +157,7 @@ Detector::Detector(std::string detector_type, std::string descriptor_type, std::
         }
         else
         {
-            detector_ = cv::AKAZE::create(cv::AKAZE::DESCRIPTOR_MLDB, 0, 3, det_args["threshold"], (int)det_args["nOctaves"], (int)det_args["nOctaveLayers"], (int)det_args["diffusivity"]);
+            detector_ = cv::AKAZE::create(cv::AKAZE::DESCRIPTOR_MLDB, 0, 3, det_args["threshold"], (int)det_args["nOctaves"], (int)det_args["nOctaveLayers"], (cv::KAZE::DiffusivityType)det_args["diffusivity"]);
         }
     }
     else if (detector_type == "KAZE")
@@ -180,7 +180,7 @@ Detector::Detector(std::string detector_type, std::string descriptor_type, std::
         }
         else
         {
-            detector_ = cv::KAZE::create(false, false, det_args["threshold"], (int)det_args["nOctaves"], (int)det_args["nOctaveLayers"], (int)det_args["diffusivity"]);
+            detector_ = cv::KAZE::create(false, false, det_args["threshold"], (int)det_args["nOctaves"], (int)det_args["nOctaveLayers"], (cv::KAZE::DiffusivityType)det_args["diffusivity"]);
         }
     }
     else if (detector_type == "AGAST")
@@ -279,7 +279,7 @@ Detector::Detector(std::string detector_type, std::string descriptor_type, std::
         }
         else
         {
-            descriptor_ = cv::AKAZE::create(cv::AKAZE::DESCRIPTOR_MLDB, 0, 3, 0.001f, (int)desc_args["nOctaves"], (int)desc_args["nOctaveLayers"], (int)desc_args["diffusivity"]);
+            descriptor_ = cv::AKAZE::create(cv::AKAZE::DESCRIPTOR_MLDB, 0, 3, 0.001f, (int)desc_args["nOctaves"], (int)desc_args["nOctaveLayers"], (cv::KAZE::DiffusivityType)desc_args["diffusivity"]);
         }
     }
     else if (descriptor_type == "KAZE")
@@ -298,7 +298,7 @@ Detector::Detector(std::string detector_type, std::string descriptor_type, std::
         }
         else
         {
-            descriptor_ = cv::KAZE::create(false, false, desc_args["threshold"], (int)desc_args["nOctaves"], (int)desc_args["nOctaveLayers"], (int)desc_args["diffusivity"]);
+            descriptor_ = cv::KAZE::create(false, false, desc_args["threshold"], (int)desc_args["nOctaves"], (int)desc_args["nOctaveLayers"], (cv::KAZE::DiffusivityType)desc_args["diffusivity"]);
         }
     }
     else if (descriptor_type == "DAISY")
@@ -325,7 +325,7 @@ Detector::Detector(std::string detector_type, std::string descriptor_type, std::
         }
         else
         {
-            descriptor_ = cv::xfeatures2d::DAISY::create((int)desc_args["radius"], (int)desc_args["q_radius"], (int)desc_args["q_theta"], (int)desc_args["q_hist"], (int)desc_args["norm"], cv::noArray(), true, true);
+            descriptor_ = cv::xfeatures2d::DAISY::create((int)desc_args["radius"], (int)desc_args["q_radius"], (int)desc_args["q_theta"], (int)desc_args["q_hist"], (cv::xfeatures2d::DAISY::NormalizationType)desc_args["norm"], cv::noArray(), true, true);
         }
     }
     else if (descriptor_type == "FREAK")
@@ -482,7 +482,7 @@ int Detector::DetectInRegion(data::Frame &frame, std::vector<data::Landmark> &la
         if (descriptorType_ == "LUCID")
         {
             cv::Mat rgb;
-            cv::cvtColor(img, rgb, CV_GRAY2BGR);
+            cv::cvtColor(img, rgb, cv::COLOR_GRAY2BGR);
             descriptor_->compute(rgb, kpts, descs);
         }
         else

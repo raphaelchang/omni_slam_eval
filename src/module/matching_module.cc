@@ -300,10 +300,10 @@ void MatchingModule::Visualization::Draw(cv::Mat &img)
 {
     if (img.channels() == 1)
     {
-        cv::cvtColor(img, img, CV_GRAY2BGR);
+        cv::cvtColor(img, img, cv::COLOR_GRAY2BGR);
     }
     cv::Mat mask;
-    cv::cvtColor(curMask_, mask, CV_BGR2GRAY);
+    cv::cvtColor(curMask_, mask, cv::COLOR_BGR2GRAY);
     curMask_.copyTo(img, mask);
     curMask_ = cv::Mat::zeros(img.size(), CV_8UC3);
 }

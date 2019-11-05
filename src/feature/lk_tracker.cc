@@ -1,6 +1,7 @@
 #include "lk_tracker.h"
 #include <cmath>
 #include "util/tf_util.h"
+#include <opencv2/optflow.hpp>
 
 namespace omni_slam
 {
@@ -78,23 +79,42 @@ int LKTracker::DoTrack(std::vector<data::Landmark> &landmarks, data::Frame &cur_
     std::vector<float> err;
     std::vector<unsigned char> stereoStatus;
     std::vector<float> stereoErr;
+    //cv::Mat keyframeColor;
+    //cv::Mat curColor;
+    //cv::cvtColor(keyframeImg_, keyframeColor, cv::COLOR_GRAY2BGR);
+    //cv::cvtColor(cur_frame.GetImage(), curColor, cv::COLOR_GRAY2BGR);
+    //cv::Ptr<cv::optflow::RLOFOpticalFlowParameter> params = cv::optflow::RLOFOpticalFlowParameter::create();
+    //params->setSmallWinSize(windowSize_.width + 1);
+    //params->setLargeWinSize(2 * windowSize_.width + 1);
+    //params->setMaxLevel(numScales_);
+    //params->setUseGlobalMotionPrior(false);
+    //params->setMaxIteration(termCrit_.maxCount);
     if (prevId_ == keyframeId_)
     {
         cv::calcOpticalFlowPyrLK(keyframeImg_, cur_frame.GetImage(), pointsToTrack, results, status, err, windowSize_, numScales_, termCrit_, 0);
+        //cv::optflow::calcOpticalFlowSparseRLOF(keyframeColor, curColor, pointsToTrack, results, status, err, params, errThresh_);
     }
     else
     {
         cv::calcOpticalFlowPyrLK(keyframeImg_, cur_frame.GetImage(), pointsToTrack, results, status, err, windowSize_, numScales_, termCrit_, cv::OPTFLOW_USE_INITIAL_FLOW);
+        //params->setUseInitialFlow(true);
+        //cv::optflow::calcOpticalFlowSparseRLOF(keyframeColor, curColor, pointsToTrack, results, status, err, params, errThresh_);
     }
     if (stereoPointsToTrack.size() > 0)
     {
+        //cv::Mat keyframeStereoColor;
+        //cv::Mat curStereoColor;
+        //cv::cvtColor(keyframeStereoImg_, keyframeStereoColor, cv::COLOR_GRAY2BGR);
+        //cv::cvtColor(cur_frame.GetStereoImage(), curStereoColor, cv::COLOR_GRAY2BGR);
         if (prevId_ == keyframeId_)
         {
             cv::calcOpticalFlowPyrLK(keyframeStereoImg_, cur_frame.GetStereoImage(), stereoPointsToTrack, stereoResults, stereoStatus, stereoErr, windowSize_, numScales_, termCrit_, 0);
+            //cv::optflow::calcOpticalFlowSparseRLOF(keyframeStereoColor, curStereoColor, stereoPointsToTrack, stereoResults, stereoStatus, stereoErr, params, errThresh_);
         }
         else
         {
             cv::calcOpticalFlowPyrLK(keyframeStereoImg_, cur_frame.GetStereoImage(), stereoPointsToTrack, stereoResults, stereoStatus, stereoErr, windowSize_, numScales_, termCrit_, cv::OPTFLOW_USE_INITIAL_FLOW);
+            //cv::optflow::calcOpticalFlowSparseRLOF(keyframeStereoColor, curStereoColor, stereoPointsToTrack, stereoResults, stereoStatus, stereoErr, params, errThresh_);
         }
     }
     errors.clear();

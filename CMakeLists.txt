@@ -24,7 +24,7 @@ find_package(catkin REQUIRED COMPONENTS ${REQ_CATKIN_PKGS})
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
-find_package(OpenCV 3.3 REQUIRED)
+find_package(OpenCV 4.1 REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 link_directories(${OpenCV_LIBRARIES_DIRS})
 

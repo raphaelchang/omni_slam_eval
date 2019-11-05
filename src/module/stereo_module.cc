@@ -83,7 +83,7 @@ void StereoModule::Visualization::Draw(cv::Mat &img, const cv::Mat &stereo_img)
     cv::hconcat(img, stereo_img, img);
     if (img.channels() == 1)
     {
-        cv::cvtColor(img, img, CV_GRAY2BGR);
+        cv::cvtColor(img, img, cv::COLOR_GRAY2BGR);
     }
     curMask_.copyTo(img, curMask_);
     curMask_ = cv::Mat::zeros(img.size(), CV_8UC3);

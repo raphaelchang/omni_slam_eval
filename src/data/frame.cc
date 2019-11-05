@@ -336,14 +336,14 @@ void Frame::DecompressImages()
     {
         return;
     }
-    image_ = cv::imdecode(cv::Mat(1, imageComp_.size(), CV_8UC1, imageComp_.data()), CV_LOAD_IMAGE_UNCHANGED);
+    image_ = cv::imdecode(cv::Mat(1, imageComp_.size(), CV_8UC1, imageComp_.data()), cv::IMREAD_UNCHANGED);
     if (hasDepth_)
     {
-        depthImage_ = cv::imdecode(cv::Mat(1, depthImageComp_.size(), CV_8UC1, depthImageComp_.data()), CV_LOAD_IMAGE_UNCHANGED);
+        depthImage_ = cv::imdecode(cv::Mat(1, depthImageComp_.size(), CV_8UC1, depthImageComp_.data()), cv::IMREAD_UNCHANGED);
     }
     if (hasStereo_)
     {
-        stereoImage_ = cv::imdecode(cv::Mat(1, stereoImageComp_.size(), CV_8UC1, stereoImageComp_.data()), CV_LOAD_IMAGE_UNCHANGED);
+        stereoImage_ = cv::imdecode(cv::Mat(1, stereoImageComp_.size(), CV_8UC1, stereoImageComp_.data()), cv::IMREAD_UNCHANGED);
     }
     imageComp_.clear();
     depthImageComp_.clear();

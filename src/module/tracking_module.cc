@@ -251,7 +251,7 @@ void TrackingModule::Visualization::Draw(cv::Mat &img)
 {
     if (img.channels() == 1)
     {
-        cv::cvtColor(img, img, CV_GRAY2BGR);
+        cv::cvtColor(img, img, cv::COLOR_GRAY2BGR);
     }
     curMask_.copyTo(img, curMask_);
     cv::addWeighted(img, 1, visMask_, trackOpacity_, 0, img);

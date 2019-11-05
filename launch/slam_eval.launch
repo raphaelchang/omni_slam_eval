@@ -31,7 +31,7 @@
             tracker_checker_epipolar_threshold: 0.008
             tracker_checker_iterations: 1000
             tracker_delta_pixel_error_threshold: 0.0
-            tracker_error_threshold: 128
+            tracker_error_threshold: 20.0
             min_features_per_region: 100
             max_features_per_region: 1000
             odometry_type: 'pnp'
