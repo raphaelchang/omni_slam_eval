@@ -94,7 +94,8 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
             regionCount_[{rinx, tinx}]++;
             regionLandmarks_[{rinx, tinx}].push_back(&landmark);
 
-            const data::Feature *obsPrev = landmark.GetObservationByFrameID((*next(frames_.rbegin()))->GetID());
+            const data::Feature *obsPrevFrame = landmark.GetObservationByFrameID((*next(frames_.rbegin()))->GetID());
+            const data::Feature *obsPrev = landmark.GetObservationByFrameID(lastKeyframe_->GetID());
             if (obsPrev != nullptr)
             {
                 Vector2d pixelGnd;
@@ -106,18 +107,50 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
                         pixel << obs->GetKeypoint().pt.x, obs->GetKeypoint().pt.y;
                         double error = (pixel - pixelGnd).norm();
 
-                        visualization_.AddTrack(cv::Point2f(pixelGnd(0), pixelGnd(1)), obsPrev->GetKeypoint().pt, obs->GetKeypoint().pt, error, i);
+                        if (obsPrevFrame != nullptr)
+                        {
+                            visualization_.AddTrack(cv::Point2f(pixelGnd(0), pixelGnd(1)), obsPrevFrame->GetKeypoint().pt, obs->GetKeypoint().pt, error, i);
+                        }
 
                         double xg = pixelGnd(0) - frames_.back()->GetImage().cols / 2. + 0.5;
                         double yg = pixelGnd(1) - frames_.back()->GetImage().rows / 2. + 0.5;
                         double rg = sqrt(xg * xg + yg * yg) / imsize;
-                        stats_.radialErrors.emplace_back(vector<double>{rg, error});
-                        stats_.frameErrors.emplace_back(vector<double>{(double)landmark.GetNumObservations() - 1, (double)i, rg, error});
+
+                        Vector2d pixelPrev;
+                        pixelPrev << obsPrev->GetKeypoint().pt.x, obsPrev->GetKeypoint().pt.y;
+                        Vector3d flow;
+                        flow = (pixel - pixelPrev).homogeneous().normalized();
+                        Vector3d ray;
+                        frames_.back()->GetCameraModel().UnprojectToBearing(pixel, ray);
+                        Vector3d rayGnd;
+                        frames_.back()->GetCameraModel().UnprojectToBearing(pixelGnd, rayGnd);
+                        Vector3d rayPrev;
+                        lastKeyframe_->GetCameraModel().UnprojectToBearing(pixelPrev, rayPrev);
+                        Vector3d rayGndPrev = rayPrev;
+                        double prevError = 0;
+                        Vector3d flowGnd;
+                        flowGnd << 0, 0, 1;
+                        Vector2d pixelGndPrev;
+                        if (lastKeyframe_->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(lastKeyframe_->GetInversePose(), landmark.GetGroundTruth())), pixelGndPrev))
+                        {
+                            prevError = (pixelPrev - pixelGndPrev).norm();
+                            flowGnd = (pixelGnd - pixelGndPrev).homogeneous().normalized();
+                            lastKeyframe_->GetCameraModel().UnprojectToBearing(pixelGndPrev, rayGndPrev);
+                        }
+                        double angularError = acos(flow.dot(flowGnd));
+                        double bearingError = acos(ray.normalized().dot(rayGnd.normalized()));
+                        double bearingErrorPrev = acos(rayPrev.normalized().dot(rayGndPrev.normalized()));
+                        stats_.radialErrors.emplace_back(vector<double>{rg, error, error - prevError, angularError, bearingError - bearingErrorPrev});
+                        stats_.frameErrors.emplace_back(vector<double>{(double)landmark.GetNumObservations() - 1, (double)i, rg, error, bearingError});
+                        stats_.successRadDists.emplace_back(vector<double>{rg, (double)frameNum_});
                     }
                 }
                 else
                 {
-                    visualization_.AddTrack(obsPrev->GetKeypoint().pt, obs->GetKeypoint().pt, i);
+                    if (obsPrevFrame != nullptr)
+                    {
+                        visualization_.AddTrack(obsPrevFrame->GetKeypoint().pt, obs->GetKeypoint().pt, i);
+                    }
                 }
             }
             stats_.trackLengths[i]++;
@@ -125,7 +158,7 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
         }
         else
         {
-            const data::Feature *obs = landmark.GetObservationByFrameID((*next(frames_.rbegin()))->GetID());
+            const data::Feature *obs = landmark.GetObservationByFrameID(lastKeyframe_->GetID());
             if (obs != nullptr) // Failed in current frame
             {
 
@@ -135,7 +168,7 @@ void TrackingModule::Update(std::unique_ptr<data::Frame> &frame)
                     double x = pixelGnd(0) - frames_.back()->GetImage().cols / 2. + 0.5;
                     double y = pixelGnd(1) - frames_.back()->GetImage().rows / 2. + 0.5;
                     double r = sqrt(x * x + y * y) / imsize;
-                    stats_.failureRadDists.push_back(r);
+                    stats_.failureRadDists.emplace_back(vector<double>{r, (double)frameNum_});
                 }
                 stats_.trackLengths.push_back(landmark.GetNumObservations() - 1);
             }

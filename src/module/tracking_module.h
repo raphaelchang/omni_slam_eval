@@ -26,7 +26,8 @@ public:
         std::vector<std::vector<double>> frameErrors;
         std::vector<std::vector<int>> frameTrackCounts;
         std::vector<int> trackLengths;
-        std::vector<double> failureRadDists;
+        std::vector<std::vector<double>> failureRadDists;
+        std::vector<std::vector<double>> successRadDists;
     };
 
     TrackingModule(std::unique_ptr<feature::Detector> &detector, std::unique_ptr<feature::Tracker> &tracker, std::unique_ptr<odometry::FivePoint> &checker, int minFeaturesRegion = 5, int maxFeaturesRegion = 5000);

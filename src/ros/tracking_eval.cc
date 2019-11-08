@@ -110,7 +110,8 @@ template <bool Stereo>
 void TrackingEval<Stereo>::GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data)
 {
     module::TrackingModule::Stats &stats = trackingModule_->GetStats();
-    data["failures"] = {stats.failureRadDists};
+    data["failures"] = stats.failureRadDists;
+    data["successes"] = stats.successRadDists;
     data["radial_errors"] = stats.radialErrors;
     data["length_errors"] = stats.frameErrors;
     data["track_counts"] = vector<vector<double>>();
