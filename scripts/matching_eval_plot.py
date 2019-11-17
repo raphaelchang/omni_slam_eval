@@ -29,7 +29,7 @@ if not os.path.isdir(args.results_path) and args.results_path.endswith('.hdf5'):
     df = pd.DataFrame(stats)
     stats = df.groupby(0).mean().to_records()
     stats = stats.view(np.float64).reshape(len(stats), -1)
-    framediff, nmatch, prec, rec = stats.T
+    framediff, nmatch, prec, rec, rep = stats.T
 
     fig = plt.figure()
     fig.suptitle('Matching - detector={}, descriptor={}, chi={}, alpha={}, fx={}, fy={}, cx={}, cy={}'.format(attrs["detector_type"], attrs["descriptor_type"], attrs["chi"][0], attrs["alpha"][0], attrs["fx"][0], attrs["fy"][0], attrs["cx"][0], attrs["cy"][0]))
@@ -88,10 +88,10 @@ if not os.path.isdir(args.results_path) and args.results_path.endswith('.hdf5'):
     # match_dict = [[] for i in range(10)]
     # for row in good_radial_distances:
         # r = int(min(row[0], 0.499999) / 0.05)
-        # match_dict[r].append((row[1], 0))
+        # match_dict[r].append((row[2], 0))
     # for row in bad_radial_distances:
         # r = int(min(row[0], 0.499999) / 0.05)
-        # match_dict[r].append((row[1], 1))
+        # match_dict[r].append((row[2], 1))
     # si_bins = [0] * 10
     # for r in range(len(match_dict)):
         # match_dict[r] = sorted(match_dict[r], key=lambda x: x[0])
@@ -129,14 +129,28 @@ if not os.path.isdir(args.results_path) and args.results_path.endswith('.hdf5'):
     valid_good = [False for i in range(num_bins)]
     valid_bad = [False for i in range(num_bins)]
     valid = [False for i in range(num_bins)]
+    # for row in good_radial_distances:
+        # r = int(min(row[0], 0.499999) / (0.5 / num_bins))
+        # X_good[r] = np.append(X_good[r], row[2])
+        # labels_good[r] = np.append(labels_good[r], 0)
+        # valid_good[r] = True
+    # for row in bad_radial_distances:
+        # r = int(min(row[0], 0.499999) / (0.5 / num_bins))
+        # X_bad[r] = np.append(X_bad[r], row[2])
+        # labels_bad[r] = np.append(labels_bad[r], 1)
+        # valid_bad[r] = True
     for row in good_radial_distances:
-        r = int(min(row[0], 0.499999) / (0.5 / num_bins))
-        X_good[r] = np.append(X_good[r], row[1])
+        if np.isnan(row[1]):
+            continue
+        r = int(min(row[1], np.pi) / (np.pi / num_bins))
+        X_good[r] = np.append(X_good[r], row[2])
         labels_good[r] = np.append(labels_good[r], 0)
         valid_good[r] = True
-    for row in bad_radial_distances:
-        r = int(min(row[0], 0.499999) / (0.5 / num_bins))
-        X_bad[r] = np.append(X_bad[r], row[1])
+    for row in good_radial_distances:
+        if np.isnan(row[1]):
+            continue
+        r = int(min(row[1], np.pi) / (np.pi / num_bins))
+        X_bad[r] = np.append(X_bad[r], row[2])
         labels_bad[r] = np.append(labels_bad[r], 1)
         valid_bad[r] = True
     for i in range(num_bins):
@@ -150,9 +164,10 @@ if not os.path.isdir(args.results_path) and args.results_path.endswith('.hdf5'):
         if len(X_bad[i]) > num_samples:
             idx_bad = np.random.choice(np.arange(len(X_bad[i])), num_samples, replace=False)
         sr[i] = sklearn.metrics.silhouette_score(np.concatenate((X_good[i][idx_good], X_bad[i][idx_bad])).reshape(-1, 1), np.concatenate((labels_good[i][idx_good], labels_bad[i][idx_bad])), metric = 'l1')
-    ax4.plot([i * 0.5 / num_bins + 0.5 / num_bins / 2 for i in range(0, len(sr)) if valid[i]], [sr[i] for i in range(0, len(sr)) if valid[i]])
+    # ax4.plot([i * 0.5 / num_bins + 0.5 / num_bins / 2 for i in range(0, len(sr)) if valid[i]], [sr[i] for i in range(0, len(sr)) if valid[i]])
+    ax4.plot([i * np.pi / num_bins + np.pi / num_bins / 2 for i in range(0, len(sr)) if valid[i]], [sr[i] for i in range(0, len(sr)) if valid[i]])
 
-    df = pd.DataFrame({'Delta radial distance': ['{}-{}'.format(r * 0.05, (r + 1) * 0.05) for r in (np.minimum(np.hstack((good_radial_distances[:, 0], bad_radial_distances[:, 0])), 0.499999) / 0.05).astype(int)], 'Descriptor distance': np.hstack((good_radial_distances[:, 1], bad_radial_distances[:, 1])), 'Match': ['Good' for i in range(len(good_radial_distances))] + ['Bad' for i in range(len(bad_radial_distances))]})
+    df = pd.DataFrame({'Delta radial distance': ['{}-{}'.format(r * 0.05, (r + 1) * 0.05) for r in (np.minimum(np.hstack((good_radial_distances[:, 0], bad_radial_distances[:, 0])), 0.499999) / 0.05).astype(int)], 'Descriptor distance': np.hstack((good_radial_distances[:, 2], bad_radial_distances[:, 2])), 'Match': ['Good' for i in range(len(good_radial_distances))] + ['Bad' for i in range(len(bad_radial_distances))]})
     sns.violinplot(x="Delta radial distance", y="Descriptor distance", hue="Match", data=df, split=True, ax=ax5, palette="Set2", inner="quart")
     handles, labels = ax5.get_legend_handles_labels()
     ax5.legend(handles=handles[0:], labels=labels[0:], fontsize='small')
@@ -181,6 +196,7 @@ elif not os.path.isdir(args.results_path) and args.results_path.endswith('.bag')
     nmatch = dict()
     prec = dict()
     rec = dict()
+    rep = dict()
     detdesclist = []
     for filename in os.listdir(os.path.dirname(args.results_path)):
         bagname = os.path.splitext(os.path.basename(args.results_path))[0]
@@ -207,10 +223,11 @@ elif not os.path.isdir(args.results_path) and args.results_path.endswith('.bag')
                 df = pd.DataFrame(stats)
                 statsavg = df.groupby(0).mean().to_records()
                 statsavg = statsavg.view(np.float64).reshape(len(statsavg), -1)
-                framediff[detdesc], nmatch[detdesc], prec[detdesc], rec[detdesc] = statsavg.T
+                framediff[detdesc], nmatch[detdesc], prec[detdesc], rec[detdesc], rep[detdesc] = statsavg.T
 
     if len(detdesclist) > 0:
         fig = plt.figure()
+        sns.set()
 
         detdesclist = sorted(detdesclist)
         legendlist = []
@@ -293,7 +310,7 @@ elif not os.path.isdir(args.results_path) and args.results_path.endswith('.bag')
 
         df = pd.DataFrame()
         for d, detdesc in enumerate(detdesclist):
-            matches = np.hstack((good_radial_distances[detdesc][:, 1], bad_radial_distances[detdesc][:, 1]))
+            matches = np.hstack((good_radial_distances[detdesc][:, 2], bad_radial_distances[detdesc][:, 2]))
             matches /= matches.max()
             df = df.append(pd.DataFrame({legendtitle: [legendlist[d] for i in range(len(matches))], 'Normalized descriptor distance': matches, 'Match': ['Good' for i in range(len(good_radial_distances[detdesc]))] + ['Bad' for i in range(len(bad_radial_distances[detdesc]))]}))
         sns.violinplot(x=legendtitle, y="Normalized descriptor distance", hue="Match", data=df, split=True, ax=ax5, palette="Set2", inner="quart")
@@ -363,9 +380,32 @@ elif not os.path.isdir(args.results_path) and args.results_path.endswith('.bag')
                     idx_good = np.random.choice(np.arange(len(idx_good)), num_samples, replace=False)
                 if len(idx_bad) > num_samples:
                     idx_bad = np.random.choice(np.arange(len(idx_bad)), num_samples, replace=False)
-                s = sklearn.metrics.silhouette_score(np.concatenate((good_radial_distances[detdesc][idx_good, 1], bad_radial_distances[detdesc][idx_bad, 1])).reshape(-1, 1), np.concatenate((labels_good[idx_good], labels_bad[idx_bad])), metric = 'l1')
+                s = sklearn.metrics.silhouette_score(np.concatenate((good_radial_distances[detdesc][idx_good, 2], bad_radial_distances[detdesc][idx_bad, 2])).reshape(-1, 1), np.concatenate((labels_good[idx_good], labels_bad[idx_bad])), metric = 'l1')
                 df = df.append(pd.DataFrame({'Detector+Descriptor': ['{}+{}'.format(detdesc[0], detdesc[1])], 'Silhouette coefficient': [s], 'FOV': [detdesc[2]]}))
             sns.catplot(x='FOV', y='Silhouette coefficient', hue='Detector+Descriptor', data=df, ax=ax6, palette="muted", kind='bar')
+
+        df_pr = pd.DataFrame()
+        frames = [1, 2, 5, 10, 15, 20, 30, 45, 60, 90, 120, 180]
+        for detdesc in detdesclist:
+            pr = precrec[detdesc][precrec[detdesc][:, 0] == 0]
+            for i in frames:
+                # if i >= int(detdesc[2]) and int(detdesc[2]) < 180:
+                    # continue
+                y, x = np.absolute(pr[pr[:, 1] == i][:, 2:].T)
+                df_pr = df_pr.append(pd.DataFrame({'Detector+Descriptor': '{}+{}'.format(detdesc[0], detdesc[1]), 'FOV': detdesc[2], 'Precision': y, 'Recall': x, 'Baseline': i}))
+        sns.relplot(y='Precision', x='Recall', hue='Baseline', col='FOV', row='Detector+Descriptor', kind='line', data=df_pr, estimator=None, facet_kws={'margin_titles': True}, legend='full', palette=sns.cubehelix_palette(rot=-0.4, n_colors=len(frames)))
+
+        df_auc = pd.DataFrame()
+        for detdesc in detdesclist:
+            pr = precrec[detdesc][precrec[detdesc][:, 0] == 0]
+            for i in range(1, int(pr[:, 1].max(axis=0))):
+                # if i > int(detdesc[2]) and i < 360 - int(detdesc[2]) and int(detdesc[2]) < 180:
+                    # df_auc = df_auc.append(pd.DataFrame({'Detector+Descriptor': ['{}+{}'.format(detdesc[0], detdesc[1])], 'FOV': [int(detdesc[2])], 'AUC': [0], 'Baseline': [i]}))
+                    # continue
+                y, x = np.absolute(pr[pr[:, 1] == i][:, 2:].T)
+                auc = np.trapz(np.flip(y), np.flip(x))
+                df_auc = df_auc.append(pd.DataFrame({'Detector+Descriptor': ['{}+{}'.format(detdesc[0], detdesc[1])], 'FOV': [int(detdesc[2])], 'AUC': [auc], 'Baseline': [i]}))
+        ax_auc = sns.relplot(y='AUC', x='Baseline', hue='FOV', col='Detector+Descriptor', col_wrap=3, kind='line', data=df_auc, estimator=None, legend='full', palette=sns.color_palette('muted', n_colors=df_auc.FOV.unique().shape[0]))
 
         plt.show()
 

@@ -27,6 +27,8 @@ public:
         std::vector<std::vector<double>> radialOverlapsErrors;
         std::vector<std::vector<double>> goodRadialDistances;
         std::vector<std::vector<double>> badRadialDistances;
+        std::vector<std::vector<double>> goodDeltaBearings;
+        std::vector<std::vector<double>> badDeltaBearings;
     };
 
     MatchingModule(std::unique_ptr<feature::Detector> &detector, std::unique_ptr<feature::Matcher> &matcher, double overlap_thresh = 0.5, double dist_thresh = 10.);
@@ -63,7 +65,7 @@ private:
     double distThresh_;
 
     int frameNum_{0};
-    std::map<int, int> frameIdToNum_;
+    std::unordered_map<int, int> frameIdToNum_;
 
     Visualization visualization_;
     Stats stats_;

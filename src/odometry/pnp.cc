@@ -97,7 +97,7 @@ int PNP::RANSAC(const std::vector<Vector3d> &xs, const std::vector<Vector3d> &ys
         std::random_device rd;
         std::mt19937 eng(rd());
         std::uniform_int_distribution<> distr(0, xs.size() - 1);
-        std::set<int> randset;
+        std::unordered_set<int> randset;
         while (randset.size() < 4)
         {
             randset.insert(distr(eng));

@@ -68,6 +68,8 @@ private:
     Matrix<double, 3, 4> stereoPose_;
     std::unique_ptr<camera::CameraModel<>> cameraModel_;
     std::unique_ptr<camera::CameraModel<>> stereoCameraModel_;
+    double vignette_{0.0};
+    double vignetteExpansion_{0.0};
 
     bool first_{true};
 };

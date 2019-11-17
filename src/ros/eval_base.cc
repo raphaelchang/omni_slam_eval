@@ -27,10 +27,12 @@ EvalBase<false>::EvalBase(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &
     nhp_.param("image_topic", imageTopic_, std::string("/camera/image_raw"));
     nhp_.param("depth_image_topic", depthImageTopic_, std::string("/depth_camera/image_raw"));
     nhp_.param("pose_topic", poseTopic_, std::string("/pose"));
+    nhp_.param("vignette", vignette_, 0.0);
+    nhp_.param("vignette_expansion", vignetteExpansion_, 0.01);
 
     if (cameraModel == "double_sphere")
     {
-        cameraModel_.reset(new camera::DoubleSphere<>(cameraParams_["fx"], cameraParams_["fy"], cameraParams_["cx"], cameraParams_["cy"], cameraParams_["chi"], cameraParams_["alpha"]));
+        cameraModel_.reset(new camera::DoubleSphere<>(cameraParams_["fx"], cameraParams_["fy"], cameraParams_["cx"], cameraParams_["cy"], cameraParams_["chi"], cameraParams_["alpha"], vignette_));
     }
     else if (cameraModel == "perspective")
     {
@@ -64,11 +66,13 @@ EvalBase<true>::EvalBase(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &n
     Quaterniond q(stereoR[3], stereoR[0], stereoR[1], stereoR[2]);
     Vector3d t(stereoT[0], stereoT[1], stereoT[2]);
     stereoPose_ = util::TFUtil::QuaternionTranslationToPoseMatrix(q, t);
+    nhp_.param("vignette", vignette_, 0.0);
+    nhp_.param("vignette_expansion", vignetteExpansion_, 0.01);
 
     if (cameraModel == "double_sphere")
     {
-        cameraModel_.reset(new camera::DoubleSphere<>(cameraParams_["fx"], cameraParams_["fy"], cameraParams_["cx"], cameraParams_["cy"], cameraParams_["chi"], cameraParams_["alpha"]));
-        stereoCameraModel_.reset(new camera::DoubleSphere<>(stereoCameraParams["fx"], stereoCameraParams["fy"], stereoCameraParams["cx"], stereoCameraParams["cy"], stereoCameraParams["chi"], stereoCameraParams["alpha"]));
+        cameraModel_.reset(new camera::DoubleSphere<>(cameraParams_["fx"], cameraParams_["fy"], cameraParams_["cx"], cameraParams_["cy"], cameraParams_["chi"], cameraParams_["alpha"], vignette_));
+        stereoCameraModel_.reset(new camera::DoubleSphere<>(cameraParams_["fx"], cameraParams_["fy"], cameraParams_["cx"], cameraParams_["cy"], cameraParams_["chi"], cameraParams_["alpha"], vignette_));
     }
     else if (cameraModel == "perspective")
     {
@@ -129,6 +133,13 @@ void EvalBase<Stereo>::FrameCallback(const sensor_msgs::ImageConstPtr &image, co
     Quaterniond q(pose->pose.orientation.w, pose->pose.orientation.x, pose->pose.orientation.y, pose->pose.orientation.z);
     Vector3d t(pose->pose.position.x, pose->pose.position.y, pose->pose.position.z);
     Matrix<double, 3, 4> posemat = util::TFUtil::QuaternionTranslationToPoseMatrix(q, t);
+    if (vignette_ > 0)
+    {
+        cv::Mat mask = cv::Mat::zeros(cvImage->image.size(), CV_32FC3);
+        cv::circle(mask, cv::Point2f(cvImage->image.cols / 2 - 0.5, cvImage->image.rows / 2 - 0.5), std::max(cvImage->image.rows, cvImage->image.cols) * (vignette_ + vignetteExpansion_) / 2, cv::Scalar::all(1), -1);
+        cv::GaussianBlur(mask, mask, cv::Size(51, 51), 0);
+        cv::multiply(cvImage->image, mask, cvImage->image, 1, CV_8UC3);
+    }
     cv::Mat monoImg;
     cv::cvtColor(cvImage->image, monoImg, CV_BGR2GRAY);
     cv::Mat depthFloatImg;
@@ -184,6 +195,14 @@ void EvalBase<Stereo>::FrameCallback(const sensor_msgs::ImageConstPtr &image, co
     Quaterniond q(pose->pose.orientation.w, pose->pose.orientation.x, pose->pose.orientation.y, pose->pose.orientation.z);
     Vector3d t(pose->pose.position.x, pose->pose.position.y, pose->pose.position.z);
     Matrix<double, 3, 4> posemat = util::TFUtil::QuaternionTranslationToPoseMatrix(q, t);
+    if (vignette_ > 0)
+    {
+        cv::Mat mask = cv::Mat::zeros(cvImage->image.size(), CV_32FC3);
+        cv::circle(mask, cv::Point2f(cvImage->image.cols / 2 - 0.5, cvImage->image.rows / 2 - 0.5), std::max(cvImage->image.rows, cvImage->image.cols) * (vignette_ + vignetteExpansion_) / 2, cv::Scalar::all(1), -1);
+        cv::GaussianBlur(mask, mask, cv::Size(51, 51), 0);
+        cv::multiply(cvImage->image, mask, cvImage->image, 1, CV_8UC3);
+        cv::multiply(cvStereoImage->image, mask, cvStereoImage->image, 1, CV_8UC3);
+    }
     cv::Mat monoImg;
     cv::cvtColor(cvImage->image, monoImg, CV_BGR2GRAY);
     cv::Mat monoImg2;

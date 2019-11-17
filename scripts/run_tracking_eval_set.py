@@ -6,6 +6,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Run tracking evaluation set')
 parser.add_argument('working_dir', help='working directory')
+parser.add_argument('--motion', type=str, help='motion type for motion set evaluation')
 parser.add_argument("--rate", type=int, help='frame rate multiplier')
 args = parser.parse_args()
 
@@ -13,10 +14,16 @@ parent = roslaunch.parent.ROSLaunchParent("", [], is_core=True)
 parent.start()
 
 if os.path.isdir(args.working_dir):
-    print ''
-    print '==========================================='
-    print 'Full motion+FOV dataset tracking evaluation'
-    print '==========================================='
+    if args.motion is None:
+        print ''
+        print '==========================================='
+        print 'Full motion+FOV dataset tracking evaluation'
+        print '==========================================='
+    else:
+        print ''
+        print '==========================================='
+        print '{} motion dataset tracking evaluation'.format(args.motion)
+        print '==========================================='
     fovs = []
     for yaml in os.listdir(args.working_dir):
         if not os.path.isdir(os.path.join(args.working_dir, yaml)) and yaml.endswith('.yaml'):
@@ -25,9 +32,14 @@ if os.path.isdir(args.working_dir):
     fovs.sort(key=int)
     for motion in os.listdir(args.working_dir):
         if os.path.isdir(os.path.join(args.working_dir, motion)):
+            if args.motion is not None and motion != args.motion:
+                continue
             bag_dir = os.path.join(args.working_dir, motion)
             for fov in fovs:
-                printstr = "Motion type {}, FOV {}".format(motion, fov)
+                if args.motion is None:
+                    printstr = "Motion type {}, FOV {}".format(motion, fov)
+                else:
+                    printstr = "FOV {}".format(fov)
                 print ''
                 print '-' * len(printstr)
                 print printstr

@@ -149,7 +149,7 @@ int FivePoint::ERANSAC(const std::vector<Vector3d> &x1, const std::vector<Vector
         std::random_device rd;
         std::mt19937 eng(rd());
         std::uniform_int_distribution<> distr(0, x1.size() - 1);
-        std::set<int> randset;
+        std::unordered_set<int> randset;
         while (randset.size() < 5)
         {
             randset.insert(distr(eng));
@@ -328,7 +328,7 @@ int FivePoint::TranslationRANSAC(const std::vector<Vector3d> &xs, const std::vec
     std::random_device rd;
     std::mt19937 eng(rd());
     std::uniform_int_distribution<> distr(0, xs.size() - 1);
-    std::set<int> randset;
+    std::unordered_set<int> randset;
     while (randset.size() < std::min(transIterations_, (int)xs.size()))
     {
         randset.insert(distr(eng));

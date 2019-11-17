@@ -448,15 +448,17 @@ int Detector::DetectInRadialRegion(data::Frame &frame, std::vector<data::Landmar
 {
     bool compressed = frame.IsCompressed();
     cv::Mat mask = cv::Mat::zeros(frame.GetImage().size(), CV_8U);
+    double start_r2 = start_r * start_r;
+    double end_r2 = end_r * end_r;
     for (int i = 0; i < mask.rows; i++)
     {
         for (int j = 0; j < mask.cols; j++)
         {
             double x = j - mask.cols / 2. + 0.5;
             double y = i - mask.rows / 2. + 0.5;
-            double r = sqrt(x * x + y * y);
+            double r2 = x * x + y * y;
             double t = util::MathUtil::FastAtan2(y, x);
-            if (r >= start_r && r < end_r && t >= start_t && t < end_t)
+            if (r2 >= start_r2 && r2 < end_r2 && t >= start_t && t < end_t)
             {
                 mask.at<unsigned char>(i, j) = 255;
             }

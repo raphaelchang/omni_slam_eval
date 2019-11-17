@@ -1,8 +1,8 @@
 <launch>
     <arg name="bag_file" default="" />
-    <arg name="camera_file" default="$(find omni_slam_eval)/launch/default_camera.yaml" />
-    <arg name="results_file" default="$(eval ''.join(arg('bag_file').split('.')[:-1]) + '.' + ''.join(arg('camera_file').split('/')[-1].split('.')[:-1]) + '.tracking.hdf5')" />
     <arg name="rate" default="1" />
+    <arg name="camera_file" default="$(find omni_slam_eval)/launch/default_camera.yaml" />
+    <arg name="results_file" default="$(eval ''.join(arg('bag_file').split('.')[:-1]) + '.' + ''.join(arg('camera_file').split('/')[-1].split('.')[:-1]) + '.' + str(arg('rate')) + 'x.tracking.hdf5')" />
     <node pkg="omni_slam_eval" type="omni_slam_tracking_eval_node" name="omni_slam_tracking_eval_node" required="true" output="screen">
         <param name="bag_file" value="$(arg bag_file)" />
         <param name="results_file" value="$(arg results_file)" />
@@ -24,6 +24,7 @@
             min_features_per_region: 10
             max_features_per_region: 999999
             keyframe_interval: 1
+            vignette_expansion: 0.05
         </rosparam>
     </node>
     <rosparam command="load" file="$(arg camera_file)" ns="omni_slam_tracking_eval_node" />

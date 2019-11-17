@@ -32,7 +32,7 @@ if not os.path.isdir(args.results_path) and args.results_path.endswith('.hdf5'):
 
     df = pandas.DataFrame()
     re_filt = radial_errors[np.where((radial_errors[:, 1] < 50) & (radial_errors[:, 2] > 0))]
-    df = df.append(pandas.DataFrame({'Radial distance': np.round(re_filt[:, 0] / 0.005) * 0.005, 'Relative endpoint error': re_filt[:, 2]}))
+    df = df.append(pandas.DataFrame({'Radial distance': np.round(re_filt[:, 0] / 0.005) * 0.005, 'Relative endpoint error (pixels)': re_filt[:, 2]}))
     # binned_errors = [[0] for i in range(30)]
     # for r, aee, ree, ae, rbe in radial_errors:
         # if aee < 50:
@@ -45,7 +45,7 @@ if not os.path.isdir(args.results_path) and args.results_path.endswith('.hdf5'):
     # ax1.set_ylim([0, 10])
     # ax1.violinplot(binned_errors[:21])
     # ax1.plot([i for i in range(1, 22)], [np.array(binned_errors[i]).mean() for i in range(21)], '-o', markersize=4, c='black')
-    sns.relplot(x="Radial distance", y="Relative endpoint error", kind="line", data=df, ci="sd", ax=ax1)
+    sns.relplot(x="Radial distance", y="Relative endpoint error (pixels)", kind="line", data=df, ci="sd", ax=ax1)
 
     ax2.set_title('Pixel errors over track lifetime')
     ax2.set_ylim([0, 0.1])
@@ -122,10 +122,11 @@ if not os.path.isdir(args.results_path) and args.results_path.endswith('.hdf5'):
 elif os.path.isdir(args.results_path):
     fig1 = plt.figure(1)
     fig2 = plt.figure(2)
-    # fig3 = plt.figure(3)
+    fig3 = plt.figure(3)
     fig1.suptitle('KLT Tracking Accuracy for Various FOVs and Motions')
     fig2.suptitle('KLT Tracking Lifetime Distributions for Various FOVs and Motions')
-    # fig3.suptitle('KLT Tracking Error Distribution Over Radial Distance for Various FOVs and Motions')
+    fig3.suptitle('KLT Tracking Track Counts for Varying Rates')
+    sns.set()
     motion_count = 0
     fov_dict = dict()
     last_fov_num = 0
@@ -141,7 +142,7 @@ elif os.path.isdir(args.results_path):
             motion_exists = False
             for fovstr in fovs:
                 for filename in os.listdir(bag_dir):
-                    if filename.endswith(fovstr + '.tracking.hdf5'):
+                    if filename.split('.')[1] == fovstr and filename.endswith('.tracking.hdf5'):
                         results_file = os.path.join(bag_dir, filename)
                         with h5py.File(results_file, 'r') as f:
                             attrs = dict(f['attributes'].attrs.items())
@@ -166,32 +167,50 @@ elif os.path.isdir(args.results_path):
     df_ee = pandas.DataFrame()
     df_ae = pandas.DataFrame()
     df_be = pandas.DataFrame()
+    df_inlier = pandas.DataFrame()
+    df_length = pandas.DataFrame()
     for motion in os.listdir(args.results_path):
         if os.path.isdir(os.path.join(args.results_path, motion)):
             df_lifetime = pandas.DataFrame()
+            df_rate = pandas.DataFrame()
+            df_rate_errors = pandas.DataFrame()
             bag_dir = os.path.join(args.results_path, motion)
             motion_exists = False
+            num_fovs = 0
             for fovstr in fovs:
-                failures = np.empty(shape=(0,2))
-                radial_errors = np.empty(shape=(0,5))
+                failures = dict()
+                successes = dict()
+                radial_errors_dict = dict()
                 track_lengths = np.empty(shape=(1,0))
+                length_errors = np.empty(shape=(0,5))
                 file_exists = False
                 for filename in os.listdir(bag_dir):
-                    if filename.endswith(fovstr + '.tracking.hdf5'):
+                    if filename.split('.')[1] == fovstr and filename.endswith('.tracking.hdf5'):
                         results_file = os.path.join(bag_dir, filename)
                         with h5py.File(results_file, 'r') as f:
-                            failures = np.vstack((failures, f['failures'][:]))
-                            radial_errors = np.vstack((radial_errors, f['radial_errors'][:]))
-                            tl = f['track_lengths'][:]
-                            track_lengths = np.hstack((track_lengths, tl[:, tl[0, :] > 0]))
                             attrs = dict(f['attributes'].attrs.items())
+                            rate = int(attrs['rate'])
+                            if rate not in successes:
+                                successes[rate] = np.empty(shape=(0,2))
+                            if rate not in failures:
+                                failures[rate] = np.empty(shape=(0,2))
+                            if rate not in radial_errors_dict:
+                                radial_errors_dict[rate] = np.empty(shape=(0,5))
+                            successes[rate] = np.vstack((successes[rate], f['successes'][:]))
+                            failures[rate] = np.vstack((failures[rate], f['failures'][:]))
+                            radial_errors_dict[rate] = np.vstack((radial_errors_dict[rate], f['radial_errors'][:]))
+                            if rate == 1:
+                                tl = f['track_lengths'][:]
+                                track_lengths = np.hstack((track_lengths, tl[:, tl[0, :] > 0]))
+                                length_errors = np.vstack((length_errors, f['length_errors'][:]))
                             file_exists = True
                             motion_exists = True
                             # fov = int(round(attrs['fov']))
                 fov = int(fovstr)
                 if file_exists:
+                    radial_errors = radial_errors_dict[1]
                     ax = fig1.add_subplot(num_rows, num_cols, motion_inx * num_cols + fov_dict[fov] + 1)
-                    ax.hist([[r for r, aee, ree, ae, rbe in radial_errors if aee <= 5], [r for r, aee, ree, ae, rbe in radial_errors if 5 < aee <= 20], [r for r, aee, ree, ae, rbe in radial_errors if 20 < aee <= 50], [r for r, _ in failures]], bins=[i * 0.05 for i in range(11)], alpha=0.5, label=['<5', '5-20', '20-50', 'Failures'], stacked=False)
+                    ax.hist([[r for r, aee, ree, ae, rbe in radial_errors if aee <= 5], [r for r, aee, ree, ae, rbe in radial_errors if 5 < aee <= 20], [r for r, aee, ree, ae, rbe in radial_errors if 20 < aee <= 50], [r for r, _ in failures[1]]], bins=[i * 0.05 for i in range(11)], alpha=0.5, label=['<5', '5-20', '20-50', 'Failures'], stacked=False)
                     ax.legend(loc='best', title='Pixel error', fontsize='x-small')
 
                     if motion_inx == 0:
@@ -208,26 +227,42 @@ elif os.path.isdir(args.results_path):
                     re_filt_ee = radial_errors[np.where((radial_errors[:, 1] < 50) & (radial_errors[:, 2] > 0))]
                     re_filt_ae = radial_errors[np.where(radial_errors[:, 1] < 50)]
                     re_filt_be = radial_errors[np.where((radial_errors[:, 1] < 50) & (radial_errors[:, 4] > 0))]
-                    df_ee = df_ee.append(pandas.DataFrame({'Radial distance': np.round(re_filt_ee[:, 0] / 0.005) * 0.005, 'FOV': [fovstr for i in range(len(re_filt_ee))], 'Motion': [motion for i in range(len(re_filt_ee))], 'Relative endpoint error': re_filt_ee[:, 2]}))
-                    df_ae = df_ae.append(pandas.DataFrame({'Radial distance': np.round(re_filt_ae[:, 0] / 0.005) * 0.005, 'FOV': [fovstr for i in range(len(re_filt_ae))], 'Motion': [motion for i in range(len(re_filt_ae))], 'Angular error': re_filt_ae[:, 3]}))
-                    df_be = df_be.append(pandas.DataFrame({'Radial distance': np.round(re_filt_be[:, 0] / 0.005) * 0.005, 'FOV': [fovstr for i in range(len(re_filt_be))], 'Motion': [motion for i in range(len(re_filt_be))], 'Relative bearing error': re_filt_be[:, 4]}))
+                    df_ee = df_ee.append(pandas.DataFrame({'Radial distance': np.round(re_filt_ee[:, 0] / 0.005) * 0.005, 'FOV': [fovstr for i in range(len(re_filt_ee))], 'Motion': [motion for i in range(len(re_filt_ee))], 'Relative endpoint error (pixels)': re_filt_ee[:, 2]}))
+                    df_ae = df_ae.append(pandas.DataFrame({'Radial distance': np.round(re_filt_ae[:, 0] / 0.005) * 0.005, 'FOV': [fovstr for i in range(len(re_filt_ae))], 'Motion': [motion for i in range(len(re_filt_ae))], 'Angular error (radians)': re_filt_ae[:, 3]}))
+                    df_be = df_be.append(pandas.DataFrame({'Radial distance': np.round(re_filt_be[:, 0] / 0.005) * 0.005, 'FOV': [fovstr for i in range(len(re_filt_be))], 'Motion': [motion for i in range(len(re_filt_be))], 'Relative bearing error (radians)': re_filt_be[:, 4]}))
+                    # df_inlier = df_inlier.append(pandas.DataFrame({'Inliers': [float(len(successes[1][successes[1][:, 1] == i + 1])) / (len(successes[1][successes[1][:, 1] == i + 1]) + len(failures[1][failures[1][:, 1] == i + 1])) for i in range(frame_num)], 'FOV': [fov for i in range(frame_num)]}))
+                    for rate, _ in failures.iteritems():
+                        frame_num = max(int(failures[rate].max(axis=0)[1]), int(successes[rate].max(axis=0)[1]))
+                        df_rate = df_rate.append(pandas.DataFrame({'Rate': [rate for i in range(frame_num)], 'Inliers': [float(len(successes[rate][successes[rate][:, 1] == i + 1])) / (len(successes[rate][successes[rate][:, 1] == i + 1]) + len(failures[rate][failures[rate][:, 1] == i + 1])) for i in range(frame_num)], 'FOV': [fov for i in range(frame_num)]}))
+                        df_rate_errors = df_rate_errors.append(pandas.DataFrame({'Rate': [rate for i in range(len(radial_errors_dict[rate]))], 'Endpoint error': [aee for _, aee, _, _, _ in radial_errors_dict[rate]], 'FOV': [fov for i in range(len(radial_errors_dict[rate]))]}))
+                    df_length = df_length.append(pandas.DataFrame({'Track length (frames)': length_errors[:, 0], 'Endpoint error': length_errors[:, 3], 'Bearing error': length_errors[:, 4], 'FOV': fovstr, 'Motion': motion}))
+                    num_fovs += 1
                 else:
                     print '[WARNING] No results files found in directory {} for FOV {}'.format(os.path.join(bag_dir), fovstr)
             if motion_exists:
                 ax2 = fig2.add_subplot(num_rows, 1, motion_inx + 1)
                 sns.violinplot(x='FOV', y='Track lifetime (frames)', data=df_lifetime, ax=ax2, palette="muted", inner='quart')
                 ax2.set_title('Motion {}'.format(motion))
+                ax_rate = fig3.add_subplot(motion_count, 2, 2 * motion_inx + 1)
+                ax_rate_errors = fig3.add_subplot(motion_count, 2, 2 * motion_inx + 2)
+                ax_rate.set_title('Motion {}'.format(motion))
+                sns.lineplot(x="Rate", y="Inliers", hue="FOV", data=df_rate, ax=ax_rate, marker='o', ci='sd', legend='full', palette=sns.color_palette('muted', n_colors=num_fovs))
+                sns.lineplot(x="Rate", y="Endpoint error", hue="FOV", data=df_rate_errors, ax=ax_rate_errors, marker='o', ci='sd', legend='full', palette=sns.color_palette('muted', n_colors=num_fovs))
+                ax_rate.set_xlabel('Degrees per frame')
+                ax_rate.set_ylabel('Inlier rate')
                 motion_inx += 1
 
     # ax_ee = fig3.add_subplot(1, 3, 1)
-    sns.relplot(x="Radial distance", y="Relative endpoint error", kind="line", data=df_ee, ci="sd", row='Motion', hue='FOV', legend="full", hue_order=fovs, palette=sns.color_palette("muted", n_colors=len(fovs)))
-    # ax_ee.set_title('Relative endpoint error')
+    sns.relplot(x="Radial distance", y="Relative endpoint error (pixels)", kind="line", data=df_ee, ci="sd", row='Motion', hue='FOV', legend="full", hue_order=fovs, palette=sns.color_palette("muted", n_colors=len(fovs)))
+    # ax_ee.set_title('Relative endpoint error (pixels)')
     # ax_ae = fig3.add_subplot(1, 3, 2)
-    sns.relplot(x="Radial distance", y="Angular error", kind="line", data=df_ae, ci="sd", row='Motion', hue='FOV', legend="full", hue_order=fovs, palette=sns.color_palette("muted", n_colors=len(fovs)))
-    # ax_ae.set_title('Angular error')
+    sns.relplot(x="Radial distance", y="Angular error (radians)", kind="line", data=df_ae, ci="sd", row='Motion', hue='FOV', legend="full", hue_order=fovs, palette=sns.color_palette("muted", n_colors=len(fovs)))
+    # ax_ae.set_title('Angular error (radians)')
     # ax_be = fig3.add_subplot(1, 3, 3)
-    sns.relplot(x="Radial distance", y="Relative bearing error", kind="line", data=df_be, ci="sd", row='Motion', hue='FOV', legend="full", hue_order=fovs, palette=sns.color_palette("muted", n_colors=len(fovs)))
-    # ax_be.set_title('Relative bearing error')
+    sns.relplot(x="Radial distance", y="Relative bearing error (radians)", kind="line", data=df_be, ci="sd", row='Motion', hue='FOV', legend="full", hue_order=fovs, palette=sns.color_palette("muted", n_colors=len(fovs)))
+    # ax_be.set_title('Relative bearing error (radians)')
+
+    sns.relplot(x='Track length (frames)', y='Endpoint error', kind='line', data=df_length, ci='sd', row='Motion', hue='FOV', legend='full', hue_order=fovs, palette=sns.color_palette('muted', n_colors=len(fovs)))
 
     plt.show()
 

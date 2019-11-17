@@ -83,6 +83,16 @@ void MatchingModule::Update(std::unique_ptr<data::Frame> &frame)
             double x_prev = prevFeat.GetKeypoint().pt.x - frames_.back()->GetImage().cols / 2. + 0.5;
             double y_prev = prevFeat.GetKeypoint().pt.y - frames_.back()->GetImage().rows / 2. + 0.5;
             double r_prev = sqrt(x_prev * x_prev + y_prev * y_prev) / imsize;
+            Vector2d prevPix;
+            prevPix << prevFeat.GetKeypoint().pt.x, prevFeat.GetKeypoint().pt.y;
+            Vector3d ray;
+            frames_.back()->GetCameraModel().UnprojectToBearing(curPix, ray);
+            Vector3d rayPrev;
+            frames_.back()->GetCameraModel().UnprojectToBearing(prevPix, rayPrev);
+            Vector3d z;
+            z << 0, 0, 1;
+            double bearingAngleCur = acos(ray.normalized().dot(z));
+            double bearingAnglePrev = acos(rayPrev.normalized().dot(z));
             Vector2d prevFeatPix;
             if (frames_.back()->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(frames_.back()->GetInversePose(), prevFeat.GetWorldPoint())), prevFeatPix))
             {
@@ -102,7 +112,7 @@ void MatchingModule::Update(std::unique_ptr<data::Frame> &frame)
                     #pragma omp critical
                     {
                         numGoodMatches[{prevFeat.GetFrame().GetID(), curFeat.GetFrame().GetID()}]++;
-                        stats_.goodRadialDistances.emplace_back(vector<double>{fabs(r - r_prev), descDist});
+                        stats_.goodRadialDistances.emplace_back(vector<double>{fabs(r - r_prev), fabs(bearingAngleCur - bearingAnglePrev), descDist});
                         goodDists[{prevFeat.GetFrame().GetID(), curFeat.GetFrame().GetID()}].push(descDist);
                         if (frameIdToNum_[prevFeat.GetFrame().GetID()] == 0)
                         {
@@ -119,7 +129,7 @@ void MatchingModule::Update(std::unique_ptr<data::Frame> &frame)
                         {
                             visualization_.AddBadMatch(curFeat.GetKeypoint(), kpt);
                         }
-                        stats_.badRadialDistances.emplace_back(vector<double>{fabs(r - r_prev), descDist});
+                        stats_.badRadialDistances.emplace_back(vector<double>{fabs(r - r_prev), fabs(bearingAngleCur - bearingAnglePrev), descDist});
                     }
                 }
             }
@@ -132,14 +142,33 @@ void MatchingModule::Update(std::unique_ptr<data::Frame> &frame)
                     {
                         visualization_.AddBadMatch(curFeat.GetKeypoint());
                     }
-                    stats_.badRadialDistances.emplace_back(vector<double>{fabs(r - r_prev), descDist});
+                    stats_.badRadialDistances.emplace_back(vector<double>{fabs(r - r_prev), fabs(bearingAngleCur - bearingAnglePrev), descDist});
                 }
             }
         }
     }
-    map<pair<int, int>, set<data::Landmark*>> goodCorrPrev;
-    map<pair<int, int>, set<data::Landmark*>> goodCorrCur;
-    map<int, int> featuresInId;
+    unordered_map<int, Vector2d> projMap;
+    unordered_map<int, int> featuresInId;
+    #pragma omp parallel for
+    for (auto it = landmarks_.begin(); it < landmarks_.end(); it++)
+    {
+        data::Landmark &prevLandmark = *it;
+        const data::Feature &prevFeat = prevLandmark.GetObservations()[0];
+        #pragma omp critical
+        {
+            featuresInId[prevFeat.GetFrame().GetID()]++;
+        }
+        Vector2d prevFeatPix;
+        if (frames_.back()->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(frames_.back()->GetInversePose(), prevLandmark.GetGroundTruth())), prevFeatPix))
+        {
+            #pragma omp critical
+            {
+                projMap[prevLandmark.GetID()] = prevFeatPix;
+            }
+        }
+    }
+    map<pair<int, int>, unordered_set<data::Landmark*>> goodCorrPrev;
+    map<pair<int, int>, unordered_set<data::Landmark*>> goodCorrCur;
     #pragma omp parallel for collapse(2)
     for (auto it1 = curLandmarks.begin(); it1 < curLandmarks.end(); it1++)
     {
@@ -149,13 +178,9 @@ void MatchingModule::Update(std::unique_ptr<data::Frame> &frame)
             data::Landmark &prevLandmark = *it2;
             const data::Feature &curFeat = curLandmark.GetObservations()[0];
             const data::Feature &prevFeat = prevLandmark.GetObservations()[0];
-            #pragma omp critical
+            if (projMap.find(prevLandmark.GetID()) != projMap.end())
             {
-                featuresInId[prevFeat.GetFrame().GetID()]++;
-            }
-            Vector2d prevFeatPix;
-            if (frames_.back()->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(frames_.back()->GetInversePose(), prevLandmark.GetGroundTruth())), prevFeatPix))
-            {
+                Vector2d prevFeatPix = projMap.at(prevLandmark.GetID());
                 cv::KeyPoint kpt = prevFeat.GetKeypoint();
                 kpt.pt = cv::Point2f(prevFeatPix(0), prevFeatPix(1));
                 Vector2d curPix;
@@ -176,14 +201,29 @@ void MatchingModule::Update(std::unique_ptr<data::Frame> &frame)
             }
         }
     }
+    map<pair<int, int>, int> maxCorr;
+    #pragma omp parallel for
+    for (auto it2 = landmarks_.begin(); it2 < landmarks_.end(); it2++)
+    {
+        data::Landmark &prevLandmark = *it2;
+        const data::Feature &prevFeat = prevLandmark.GetObservations()[0];
+        Vector2d prevFeatPix;
+        if (frames_.back()->GetCameraModel().ProjectToImage(util::TFUtil::WorldFrameToCameraFrame(util::TFUtil::TransformPoint(frames_.back()->GetInversePose(), prevLandmark.GetGroundTruth())), prevFeatPix))
+        {
+            #pragma omp critical
+            {
+                maxCorr[{prevFeat.GetFrame().GetID(), frames_.back()->GetID()}]++;
+            }
+        }
+    }
     map<pair<int, int>, int> numCorr;
     map<pair<int, int>, int> numNeg;
     map<pair<int, int>, vector<pair<double, double>>> rocCurves;
     map<pair<int, int>, vector<pair<double, double>>> prCurves;
     for (auto &corrPrevPair : goodCorrPrev)
     {
-        set<data::Landmark*> &corrPrev = corrPrevPair.second;
-        set<data::Landmark*> &corrCur = goodCorrCur[corrPrevPair.first];
+        unordered_set<data::Landmark*> &corrPrev = corrPrevPair.second;
+        unordered_set<data::Landmark*> &corrCur = goodCorrCur[corrPrevPair.first];
         numCorr[corrPrevPair.first] = min(corrPrev.size(), corrCur.size());
         numNeg[corrPrevPair.first] = featuresInId[corrPrevPair.first.first] * curLandmarks.size() - numCorr[corrPrevPair.first];
         priority_queue<double> &goodDist = goodDists[corrPrevPair.first];
@@ -225,7 +265,7 @@ void MatchingModule::Update(std::unique_ptr<data::Frame> &frame)
     for (auto &statPair : numGoodMatches)
     {
         int frameDiff = frameIdToNum_[statPair.first.second] - frameIdToNum_[statPair.first.first];
-        stats_.frameMatchStats.emplace_back(vector<double>{(double)frameDiff, (double)statPair.second, (double)statPair.second / numMatches[statPair.first], (double)statPair.second / numCorr[statPair.first]});
+        stats_.frameMatchStats.emplace_back(vector<double>{(double)frameDiff, (double)statPair.second, (double)statPair.second / numMatches[statPair.first], (double)statPair.second / numCorr[statPair.first], (double)numCorr[statPair.first] / maxCorr[statPair.first]});
         for (pair<double, double> &roc : rocCurves[statPair.first])
         {
             stats_.rocCurves.emplace_back(vector<double>{(double)frameIdToNum_[statPair.first.first], (double)frameIdToNum_[statPair.first.second], roc.first, roc.second});

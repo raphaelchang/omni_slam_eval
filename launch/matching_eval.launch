@@ -1,7 +1,7 @@
 <launch>
     <arg name="bag_file" default="" />
     <arg name="detector_type" default="ORB" />
-    <arg name="detector_params" default="{nfeatures: 100}" />
+    <arg name="detector_params" default="{nfeatures: 50}" />
     <arg name="descriptor_type" default="ORB" />
     <arg name="descriptor_params" default="{}" />
     <arg name="camera_file" default="$(find omni_slam_eval)/launch/default_camera.yaml" />
@@ -24,6 +24,7 @@
             matcher_max_dist: $(arg matcher_thresh)
             feature_overlap_threshold: 0.5
             feature_distance_threshold: 10
+            vignette_expansion: 0.01
         </rosparam>
     </node>
     <rosparam command="load" file="$(arg camera_file)" ns="omni_slam_matching_eval_node" />

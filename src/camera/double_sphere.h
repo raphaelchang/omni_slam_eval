@@ -14,14 +14,15 @@ class DoubleSphere : public CameraModel<T>
     template <typename> friend class DoubleSphere;
 
 public:
-    DoubleSphere(const T fx, const T fy, const T cx, const T cy, const T chi, const T alpha)
+    DoubleSphere(const T fx, const T fy, const T cx, const T cy, const T chi, const T alpha, const T vignette = T(0.))
         : CameraModel<T>("DoubleSphere"),
         fx_(fx),
         fy_(fy),
         cx_(cx),
         cy_(cy),
         chi_(chi),
-        alpha_(alpha)
+        alpha_(alpha),
+        vignette_(vignette)
     {
         cameraMat_ << fx_, 0., cx_, 0., fy_, cy_, 0., 0., 1.;
         fov_ = GetFOV();
@@ -122,8 +123,14 @@ public:
         T r2;
         if (alpha_ > 0.5)
         {
-            //r2 = std::min(mx * mx, 1. / (2. * alpha_ - 1.));
-            r2 = 1. / (2. * alpha_ - 1.);
+            if (vignette_ > 0.)
+            {
+                r2 = std::min(mx * mx * vignette_ * vignette_, 1. / (2. * alpha_ - 1.));
+            }
+            else
+            {
+                r2 = 1. / (2. * alpha_ - 1.);
+            }
         }
         else
         {
@@ -148,6 +155,7 @@ private:
     T alpha_;
     T fov_;
     T sinTheta_;
+    T vignette_;
     Matrix<T, 3, 3> cameraMat_;
 };
 
