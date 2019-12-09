@@ -18,7 +18,8 @@ public:
     enum Type
     {
         kPerspective,
-        kDoubleSphere
+        kDoubleSphere,
+        kUnified
     };
 
     CameraModel(std::string name)

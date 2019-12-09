@@ -2,6 +2,7 @@
 
 #include "feature/matcher.h"
 #include "feature/detector.h"
+#include "odometry/five_point.h"
 
 using namespace std;
 
@@ -18,6 +19,9 @@ MatchingEval::MatchingEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle 
     double matcherMaxDist;
     double overlapThresh;
     double distThresh;
+    bool localUnwarp;
+    double fivePointThreshold;
+    int fivePointRansacIterations;
 
     nhp_.param("detector_type", detectorType_, string("SIFT"));
     nhp_.getParam("detector_parameters", detectorParams);
@@ -26,6 +30,9 @@ MatchingEval::MatchingEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle 
     nhp_.param("matcher_max_dist", matcherMaxDist, 0.);
     nhp_.param("feature_overlap_threshold", overlapThresh, 0.5);
     nhp_.param("feature_distance_threshold", distThresh, 10.);
+    nhp_.param("local_unwarp", localUnwarp, false);
+    nhp_.param("estimator_epipolar_threshold", fivePointThreshold, 0.01745240643);
+    nhp_.param("estimator_iterations", fivePointRansacIterations, 1000);
 
     unique_ptr<feature::Detector> detector;
     if (feature::Detector::IsDetectorTypeValid(detectorType_))
@@ -34,7 +41,7 @@ MatchingEval::MatchingEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle 
         {
             ROS_WARN("Invalid feature detector descriptor combination specified");
         }
-        detector.reset(new feature::Detector(detectorType_, descriptorType_, detectorParams, descriptorParams));
+        detector.reset(new feature::Detector(detectorType_, descriptorType_, detectorParams, descriptorParams, localUnwarp));
     }
     else
     {
@@ -42,8 +49,9 @@ MatchingEval::MatchingEval(const ::ros::NodeHandle &nh, const ::ros::NodeHandle 
     }
 
     unique_ptr<feature::Matcher> matcher(new feature::Matcher(descriptorType_, matcherMaxDist));
+    unique_ptr<odometry::FivePoint> estimator(new odometry::FivePoint(fivePointRansacIterations, fivePointThreshold, 0, false, 0));
 
-    matchingModule_.reset(new module::MatchingModule(detector, matcher, overlapThresh, distThresh));
+    matchingModule_.reset(new module::MatchingModule(detector, matcher, estimator, overlapThresh, distThresh));
 }
 
 void MatchingEval::InitPublishers()
@@ -69,6 +77,7 @@ void MatchingEval::GetResultsData(std::map<std::string, std::vector<std::vector<
     data["bad_radial_distances"] = stats.badRadialDistances;
     data["roc_curves"] = stats.rocCurves;
     data["precision_recall_curves"] = stats.precRecCurves;
+    data["rotation_errors"] = stats.rotationErrors;
 }
 
 bool MatchingEval::GetAttributes(std::map<std::string, std::string> &attributes)

@@ -53,7 +53,7 @@ public:
         }
     }
     Detector(std::string detector_type, std::map<std::string, double> args);
-    Detector(std::string detector_type, std::string descriptor_type, std::map<std::string, double> det_args, std::map<std::string, double> desc_args);
+    Detector(std::string detector_type, std::string descriptor_type, std::map<std::string, double> det_args, std::map<std::string, double> desc_args, bool local_unwarp = false);
     Detector(const Detector &other);
 
     int Detect(data::Frame &frame, std::vector<data::Landmark> &landmarks, bool stereo = false) const;
@@ -76,6 +76,8 @@ private:
 
     std::map<std::string, double> detectorArgs_;
     std::map<std::string, double> descriptorArgs_;
+
+    bool localUnwarp_{false};
 };
 
 }

@@ -40,6 +40,8 @@ private:
     ::ros::Publisher pathGndPublisher_;
 
     std::string cameraFrame_;
+
+    std::vector<std::vector<double>> odometryData_;
 };
 
 }

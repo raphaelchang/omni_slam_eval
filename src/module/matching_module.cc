@@ -9,16 +9,17 @@ namespace omni_slam
 namespace module
 {
 
-MatchingModule::MatchingModule(std::unique_ptr<feature::Detector> &detector, std::unique_ptr<feature::Matcher> &matcher, double overlap_thresh, double dist_thresh)
+MatchingModule::MatchingModule(std::unique_ptr<feature::Detector> &detector, std::unique_ptr<feature::Matcher> &matcher, std::unique_ptr<odometry::FivePoint> &estimator, double overlap_thresh, double dist_thresh)
     : detector_(std::move(detector)),
     matcher_(std::move(matcher)),
+    fivePointEstimator_(std::move(estimator)),
     overlapThresh_(overlap_thresh),
     distThresh_(dist_thresh)
 {
 }
 
-MatchingModule::MatchingModule(std::unique_ptr<feature::Detector> &&detector, std::unique_ptr<feature::Matcher> &&matcher, double overlap_thresh, double dist_thresh)
-    : MatchingModule(detector, matcher, overlap_thresh, dist_thresh)
+MatchingModule::MatchingModule(std::unique_ptr<feature::Detector> &&detector, std::unique_ptr<feature::Matcher> &&matcher, std::unique_ptr<odometry::FivePoint> &&estimator, double overlap_thresh, double dist_thresh)
+    : MatchingModule(detector, matcher, estimator, overlap_thresh, dist_thresh)
 {
 }
 
@@ -63,6 +64,22 @@ void MatchingModule::Update(std::unique_ptr<data::Frame> &frame)
     vector<vector<double>> distances;
     vector<int> indices;
     map<pair<int, int>, int> numMatches = matcher_->Match(landmarks_, curLandmarks, matches, distances, indices);
+
+    for (int i = 0; i < frames_.size() - 1; i++)
+    {
+        data::Frame &baseFrame = *frames_[i];
+        Matrix<double, 3, 4> P;
+        std::vector<int> inlierIndices;
+        int inliers = fivePointEstimator_->Compute(matches, baseFrame, *frames_.back(), inlierIndices, P);
+        if (inliers > 0 && baseFrame.HasPose() && frames_.back()->HasPose())
+        {
+            Matrix<double, 3, 4> relGndPoseInv = util::TFUtil::GetRelativeTransform(frames_.back()->GetPose(), baseFrame.GetPose());
+            Matrix3d R = relGndPoseInv.block<3, 3>(0, 0) * P.block<3, 3>(0, 0);
+            AngleAxisd err(R);
+            stats_.rotationErrors.emplace_back(std::vector<double>{(double)frameIdToNum_[baseFrame.GetID()], (double)frameIdToNum_[frames_.back()->GetID()], std::abs(err.angle()), (double)inliers, (double)numMatches[{baseFrame.GetID(), frames_.back()->GetID()}]});
+        }
+    }
+
     map<pair<int, int>, int> numGoodMatches;
     map<pair<int, int>, priority_queue<double>> goodDists;
     map<pair<int, int>, priority_queue<double>> badDists;

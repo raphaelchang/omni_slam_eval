@@ -30,6 +30,8 @@ private:
     int baSlidingWindow_;
     int baSlidingInterval_;
     int frameNum_{0};
+
+    std::vector<std::vector<double>> odometryData_;
 };
 
 }

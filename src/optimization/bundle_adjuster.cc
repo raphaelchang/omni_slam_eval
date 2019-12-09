@@ -3,6 +3,7 @@
 #include "reprojection_error.h"
 
 #include "camera/double_sphere.h"
+#include "camera/unified.h"
 #include "camera/perspective.h"
 
 namespace omni_slam
@@ -161,6 +162,17 @@ bool BundleAdjuster::Optimize(std::vector<data::Landmark> &landmarks, const std:
                 else
                 {
                     cost_function = ReprojectionError<camera::DoubleSphere>::Create(feature);
+                }
+            }
+            else if (feature.GetFrame().GetCameraModel().GetType() == camera::CameraModel<>::kUnified)
+            {
+                if (stereoFeat != nullptr)
+                {
+                    cost_function = ReprojectionError<camera::Unified>::Create(feature, *stereoFeat);
+                }
+                else
+                {
+                    cost_function = ReprojectionError<camera::Unified>::Create(feature);
                 }
             }
             if (cost_function != nullptr)

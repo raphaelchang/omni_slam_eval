@@ -7,7 +7,7 @@ import argparse
 parser = argparse.ArgumentParser(description='Run tracking evaluation set')
 parser.add_argument('working_dir', help='working directory')
 parser.add_argument('--motion', type=str, help='motion type for motion set evaluation')
-parser.add_argument("--rate", type=int, help='frame rate multiplier')
+parser.add_argument("--rate", type=int, help='frame rate multiplier', default=1)
 args = parser.parse_args()
 
 parent = roslaunch.parent.ROSLaunchParent("", [], is_core=True)

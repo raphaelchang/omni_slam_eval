@@ -1,0 +1,19 @@
+camera_model: perspective
+
+camera_parameters:
+    fx: 385.8049
+    fy: 385.8049
+    cx: 320.04638672
+    cy: 240.49636841
+
+stereo_camera_parameters:
+    fx: 385.8049
+    fy: 385.8049
+    cx: 320.04638672
+    cy: 240.49636841
+    tf_t: [0.049862396, 0.0, 0.0]
+    tf_r: [0.0, 0.0, 0.0, 1.0]
+
+image_topic: /d400/infra1/image_rect_raw
+stereo_image_topic: /d400/infra2/image_rect_raw
+vignette: 0

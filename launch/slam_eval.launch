@@ -23,7 +23,7 @@
         <param name="rate" value="$(arg rate)" />
         <rosparam subst_value="true">
             detector_type: 'GFTT'
-            detector_parameters: {maxCorners: 5000, qualityLevel: 0.001, minDistance: 5, blockSize: 5}
+            detector_parameters: {maxCorners: 1000, qualityLevel: 0.001, minDistance: 5, blockSize: 5}
             keyframe_interval: 1
             tracker_type: 'lk'
             tracker_window_size: 128
@@ -33,13 +33,13 @@
             tracker_delta_pixel_error_threshold: 0.0
             tracker_error_threshold: 20.0
             min_features_per_region: 100
-            max_features_per_region: 1000
+            max_features_per_region: 5000
             odometry_type: 'pnp'
             pnp_inlier_threshold: 3.0
             pnp_iterations: 3000
             max_reprojection_error: 5.0
-            min_triangulation_angle: 3.0
-            bundle_adjustment_max_iterations: 1000
+            min_triangulation_angle: 5.0
+            bundle_adjustment_max_iterations: 10
             bundle_adjustment_loss_coefficient: 0.05
             bundle_adjustment_logging: true
             bundle_adjustment_num_threads: 20
@@ -49,6 +49,7 @@
             stereo_matcher_num_scales: 5
             stereo_matcher_error_threshold: 20
             stereo_matcher_epipolar_threshold: 0.008
+            vignette_expansion: 0.05
         </rosparam>
     </node>
     <rosparam command="load" file="$(arg camera_file)" ns="omni_slam_slam_eval_node" />

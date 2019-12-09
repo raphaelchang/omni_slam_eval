@@ -6,11 +6,12 @@ namespace omni_slam
 namespace feature
 {
 
-Detector::Detector(std::string detector_type, std::string descriptor_type, std::map<std::string, double> det_args, std::map<std::string, double> desc_args)
+Detector::Detector(std::string detector_type, std::string descriptor_type, std::map<std::string, double> det_args, std::map<std::string, double> desc_args, bool local_unwarp)
     : detectorType_(detector_type),
     descriptorType_(descriptor_type),
     detectorArgs_(det_args),
-    descriptorArgs_(desc_args)
+    descriptorArgs_(desc_args),
+    localUnwarp_(local_unwarp)
 {
     if (detector_type == "GFTT")
     {
@@ -421,7 +422,7 @@ Detector::Detector(std::string detector_type, std::map<std::string, double> args
 }
 
 Detector::Detector(const Detector &other)
-    : Detector(other.detectorType_, other.descriptorType_, other.detectorArgs_, other.descriptorArgs_)
+    : Detector(other.detectorType_, other.descriptorType_, other.detectorArgs_, other.descriptorArgs_, other.localUnwarp_)
 {
 }
 
@@ -481,15 +482,98 @@ int Detector::DetectInRegion(data::Frame &frame, std::vector<data::Landmark> &la
     cv::Mat descs;
     if (descriptor_.get() != nullptr)
     {
-        if (descriptorType_ == "LUCID")
+        if (!localUnwarp_)
         {
-            cv::Mat rgb;
-            cv::cvtColor(img, rgb, cv::COLOR_GRAY2BGR);
-            descriptor_->compute(rgb, kpts, descs);
+            if (descriptorType_ == "LUCID")
+            {
+                cv::Mat rgb;
+                cv::cvtColor(img, rgb, cv::COLOR_GRAY2BGR);
+                descriptor_->compute(rgb, kpts, descs);
+            }
+            else
+            {
+                descriptor_->compute(img, kpts, descs);
+            }
         }
         else
         {
-            descriptor_->compute(img, kpts, descs);
+            std::vector<cv::KeyPoint> newKpts;
+            const camera::CameraModel<> &cam = stereo ? frame.GetStereoCameraModel() : frame.GetCameraModel();
+            for (int i = 0; i < kpts.size(); i++)
+            {
+                Vector2d pix(kpts[i].pt.x, kpts[i].pt.y);
+                Vector3d bearing;
+                if (!cam.UnprojectToBearing(pix, bearing))
+                {
+                    continue;
+                }
+                Matrix3d rot = Quaterniond::FromTwoVectors(Vector3d(0, 0, 1), bearing).toRotationMatrix();
+                //cv::Point2f origin(img.cols / 2. - 0.5, img.rows / 2. - 0.5);
+                cv::Point2f origin(img.cols / 2., img.rows / 2.);
+                double size = ceil(kpts[i].size);
+                if (descriptorType_ == "BRISK")
+                {
+                    size *= 4;
+                }
+                cv::Mat mapXFloat(cv::Size((int)size + 1, (int)size + 1), CV_32FC1);
+                cv::Mat mapYFloat(cv::Size((int)size + 1, (int)size + 1), CV_32FC1);
+                int j, k;
+                float x, y;
+                for (j = 0, x = origin.x - size / 2.; x <= origin.x + size / 2.; x += 1, j++)
+                {
+                    for (k = 0, y = origin.y - size / 2.; y <= origin.y + size / 2.; y += 1, k++)
+                    {
+                        Vector3d normPix;
+                        Vector2d virtPix(x, y);
+                        cam.UnprojectToBearing(virtPix, normPix);
+                        Vector3d rotPix = rot * normPix;
+                        double undistX = -1;
+                        double undistY = -1;
+                        Vector2d proj;
+                        if (cam.ProjectToImage(rotPix, proj))
+                        {
+                            undistX = proj(0);
+                            undistY = proj(1);
+                        }
+                        mapXFloat.at<float>(k, j) = undistX;
+                        mapYFloat.at<float>(k, j) = undistY;
+                    }
+                }
+                cv::Mat mapX;
+                cv::Mat mapY;
+                cv::convertMaps(mapXFloat, mapYFloat, mapX, mapY, CV_16SC2);
+                cv::Mat cropped;
+                cv::getRectSubPix(img, cv::Size((int)size, (int)size), kpts[i].pt, cropped);
+                cv::Mat undist;
+                cv::remap(img, undist, mapX, mapY, cv::INTER_LINEAR, cv::BORDER_CONSTANT);
+                //cv::imshow("undist", undist);
+                //cv::imshow("cropped", cropped);
+                //cv::waitKey(0);
+                cv::KeyPoint kpt = kpts[i];
+                kpt.pt = cv::Point2f(size / 2., size / 2.);
+                if (descriptorType_ == "AKAZE" || descriptorType_ == "KAZE")
+                {
+                    kpt.class_id = 0;
+                }
+                std::vector<cv::KeyPoint> kptsTmp{kpt};
+                cv::Mat descsTmp;
+                if (descriptorType_ == "LUCID")
+                {
+                    cv::Mat rgb;
+                    cv::cvtColor(undist, rgb, cv::COLOR_GRAY2BGR);
+                    descriptor_->compute(rgb, kptsTmp, descsTmp);
+                }
+                else
+                {
+                    descriptor_->compute(undist, kptsTmp, descsTmp);
+                }
+                for (int j = 0; j < kptsTmp.size(); j++)
+                {
+                    descs.push_back(descsTmp.row(j));
+                    newKpts.push_back(kpts[i]);
+                }
+            }
+            kpts = newKpts;
         }
     }
     for (int i = 0; i < kpts.size(); i++)

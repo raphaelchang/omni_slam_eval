@@ -54,6 +54,18 @@ void SLAMEval::ProcessFrame(unique_ptr<data::Frame> &&frame)
 
 void SLAMEval::Finish()
 {
+    bool first = true;
+    for (const std::unique_ptr<data::Frame> &frame : this->trackingModule_->GetFrames())
+    {
+        if (frame->HasEstimatedPose() || first)
+        {
+            const Matrix<double, 3, 4> &pose = (first && !frame->HasEstimatedPose()) ? frame->GetPose() : frame->GetEstimatedPose();
+            Quaterniond quat(pose.block<3, 3>(0, 0));
+            quat.normalize();
+            odometryData_.emplace_back(std::vector<double>{pose(0, 3), pose(1, 3), pose(2, 3), quat.x(), quat.y(), quat.z(), quat.w()});
+        }
+        first = false;
+    }
     ReconstructionEval<true>::Finish();
     PublishOdometry(true);
 }
@@ -61,6 +73,7 @@ void SLAMEval::Finish()
 void SLAMEval::GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data)
 {
     OdometryEval<true>::GetResultsData(data);
+    data["estimated_poses"] = odometryData_;
     ReconstructionEval<true>::GetResultsData(data);
 }
 

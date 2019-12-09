@@ -46,7 +46,7 @@ Vector3d Feature::GetBearing() const
 {
     Vector3d cameraFramePt;
     Vector2d pixelPt;
-    pixelPt << kpt_.pt.x + 0.5, kpt_.pt.y + 0.5;
+    pixelPt << kpt_.pt.x, kpt_.pt.y;
     if (stereo_)
     {
         frame_.GetStereoCameraModel().UnprojectToBearing(pixelPt, cameraFramePt);
@@ -66,7 +66,7 @@ Vector3d Feature::GetWorldPoint()
     }
     Vector3d worldFramePt = GetBearing();
     bool wasCompressed = frame_.IsCompressed();
-    worldFramePt *= frame_.GetDepthImage().at<double>((int)(kpt_.pt.y + 0.5), (int)(kpt_.pt.x + 0.5));
+    worldFramePt *= frame_.GetDepthImage().at<double>((int)round(kpt_.pt.y), (int)round(kpt_.pt.x));
     if (wasCompressed)
     {
         frame_.CompressImages();
@@ -84,7 +84,7 @@ Vector3d Feature::GetEstimatedWorldPoint()
     }
     Vector3d worldFramePt = GetBearing();
     bool wasCompressed = frame_.IsCompressed();
-    worldFramePt *= frame_.GetDepthImage().at<double>((int)(kpt_.pt.y + 0.5), (int)(kpt_.pt.x + 0.5));
+    worldFramePt *= frame_.GetDepthImage().at<double>((int)round(kpt_.pt.y), (int)round(kpt_.pt.x));
     if (wasCompressed)
     {
         frame_.CompressImages();

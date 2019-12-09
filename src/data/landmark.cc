@@ -185,5 +185,10 @@ bool Landmark::IsEstimatedByFrame(const int frame_id) const
     return estFrameIds_.find(frame_id) != estFrameIds_.end();
 }
 
+const int Landmark::GetNumFramesForEstimate() const
+{
+    return estFrameIds_.size();
+}
+
 }
 }

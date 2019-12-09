@@ -5,7 +5,8 @@
     <arg name="descriptor_type" default="ORB" />
     <arg name="descriptor_params" default="{}" />
     <arg name="camera_file" default="$(find omni_slam_eval)/launch/default_camera.yaml" />
-    <arg name="results_file" default="$(eval ''.join(arg('bag_file').split('.')[:-1]) + '.' + ''.join(arg('camera_file').split('/')[-1].split('.')[:-1]) + '.' + arg('detector_type') + '_' + arg('descriptor_type') + '.matching.hdf5')" />
+    <arg name="local_unwarping" default="false" />
+    <arg name="results_file" default="$(eval ''.join(arg('bag_file').split('.')[:-1]) + '.' + ''.join(arg('camera_file').split('/')[-1].split('.')[:-1]) + '.' + arg('detector_type') + '_' + arg('descriptor_type') + ('+LR' if arg('local_unwarping') else '') + '.matching.hdf5')" />
     <arg name="rate" default="1" />
     <arg name="matcher_thresh" default="0" />
     <node pkg="omni_slam_eval" type="omni_slam_matching_eval_node" name="omni_slam_matching_eval_node" required="true" output="screen">
@@ -24,6 +25,9 @@
             matcher_max_dist: $(arg matcher_thresh)
             feature_overlap_threshold: 0.5
             feature_distance_threshold: 10
+            local_unwarp: $(arg local_unwarping)
+            estimator_epipolar_threshold: 0.008
+            estimator_iterations: 1000
             vignette_expansion: 0.01
         </rosparam>
     </node>

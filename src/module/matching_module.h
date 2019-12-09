@@ -8,6 +8,7 @@
 #include "feature/matcher.h"
 #include "feature/detector.h"
 #include "feature/region.h"
+#include "odometry/five_point.h"
 #include "data/frame.h"
 #include "data/landmark.h"
 
@@ -29,10 +30,11 @@ public:
         std::vector<std::vector<double>> badRadialDistances;
         std::vector<std::vector<double>> goodDeltaBearings;
         std::vector<std::vector<double>> badDeltaBearings;
+        std::vector<std::vector<double>> rotationErrors;
     };
 
-    MatchingModule(std::unique_ptr<feature::Detector> &detector, std::unique_ptr<feature::Matcher> &matcher, double overlap_thresh = 0.5, double dist_thresh = 10.);
-    MatchingModule(std::unique_ptr<feature::Detector> &&detector, std::unique_ptr<feature::Matcher> &&matcher, double overlap_thresh = 0.5, double dist_thresh = 10.);
+    MatchingModule(std::unique_ptr<feature::Detector> &detector, std::unique_ptr<feature::Matcher> &matcher, std::unique_ptr<odometry::FivePoint> &estimator, double overlap_thresh = 0.5, double dist_thresh = 10.);
+    MatchingModule(std::unique_ptr<feature::Detector> &&detector, std::unique_ptr<feature::Matcher> &&matcher, std::unique_ptr<odometry::FivePoint> &&estimator, double overlap_thresh = 0.5, double dist_thresh = 10.);
 
     void Update(std::unique_ptr<data::Frame> &frame);
 
@@ -57,6 +59,7 @@ private:
 
     std::shared_ptr<feature::Detector> detector_;
     std::shared_ptr<feature::Matcher> matcher_;
+    std::shared_ptr<odometry::FivePoint> fivePointEstimator_;
 
     std::vector<std::unique_ptr<data::Frame>> frames_;
     std::vector<data::Landmark> landmarks_;

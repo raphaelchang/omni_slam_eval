@@ -4,6 +4,7 @@
 #include <rosbag/view.h>
 
 #include "camera/double_sphere.h"
+#include "camera/unified.h"
 #include "camera/perspective.h"
 #include "util/tf_util.h"
 #include "util/hdf_file.h"
@@ -33,6 +34,10 @@ EvalBase<false>::EvalBase(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &
     if (cameraModel == "double_sphere")
     {
         cameraModel_.reset(new camera::DoubleSphere<>(cameraParams_["fx"], cameraParams_["fy"], cameraParams_["cx"], cameraParams_["cy"], cameraParams_["chi"], cameraParams_["alpha"], vignette_));
+    }
+    else if (cameraModel == "unified")
+    {
+        cameraModel_.reset(new camera::Unified<>(cameraParams_["fx"], cameraParams_["fy"], cameraParams_["cx"], cameraParams_["cy"], cameraParams_["chi"], new camera::RadTan<>(cameraParams_["k1"], cameraParams_["k2"], cameraParams_["p1"], cameraParams_["p2"]), vignette_));
     }
     else if (cameraModel == "perspective")
     {
@@ -73,6 +78,11 @@ EvalBase<true>::EvalBase(const ::ros::NodeHandle &nh, const ::ros::NodeHandle &n
     {
         cameraModel_.reset(new camera::DoubleSphere<>(cameraParams_["fx"], cameraParams_["fy"], cameraParams_["cx"], cameraParams_["cy"], cameraParams_["chi"], cameraParams_["alpha"], vignette_));
         stereoCameraModel_.reset(new camera::DoubleSphere<>(cameraParams_["fx"], cameraParams_["fy"], cameraParams_["cx"], cameraParams_["cy"], cameraParams_["chi"], cameraParams_["alpha"], vignette_));
+    }
+    else if (cameraModel == "unified")
+    {
+        cameraModel_.reset(new camera::Unified<>(cameraParams_["fx"], cameraParams_["fy"], cameraParams_["cx"], cameraParams_["cy"], cameraParams_["chi"], new camera::RadTan<>(cameraParams_["k1"], cameraParams_["k2"], cameraParams_["p1"], cameraParams_["p2"]), vignette_));
+        stereoCameraModel_.reset(new camera::Unified<>(stereoCameraParams["fx"], stereoCameraParams["fy"], stereoCameraParams["cx"], stereoCameraParams["cy"], stereoCameraParams["chi"], new camera::RadTan<>(stereoCameraParams["k1"], stereoCameraParams["k2"], stereoCameraParams["p1"], stereoCameraParams["p2"]), vignette_));
     }
     else if (cameraModel == "perspective")
     {
@@ -346,6 +356,8 @@ void EvalBase<Stereo>::Run()
                             pose->pose.position.y = tfMsg->transform.translation.x;
                             pose->pose.position.z = tfMsg->transform.translation.z;
                             pose->pose.orientation = tfMsg->transform.rotation;
+                            pose->pose.orientation.x = -tfMsg->transform.rotation.y;
+                            pose->pose.orientation.y = tfMsg->transform.rotation.x;
                         }
                     }
                     else

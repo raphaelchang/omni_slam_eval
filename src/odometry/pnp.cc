@@ -4,6 +4,7 @@
 #include <ceres/ceres.h>
 #include "optimization/reprojection_error.h"
 #include "camera/double_sphere.h"
+#include "camera/unified.h"
 #include "camera/perspective.h"
 
 #include "util/tf_util.h"
@@ -150,6 +151,10 @@ bool PNP::Refine(const std::vector<Vector3d> &xs, const std::vector<const data::
         else if (features[i]->GetFrame().GetCameraModel().GetType() == camera::CameraModel<>::kDoubleSphere)
         {
             cost_function = optimization::ReprojectionError<camera::DoubleSphere>::Create(*features[i]);
+        }
+        else if (features[i]->GetFrame().GetCameraModel().GetType() == camera::CameraModel<>::kUnified)
+        {
+            cost_function = optimization::ReprojectionError<camera::Unified>::Create(*features[i]);
         }
         if (cost_function != nullptr)
         {

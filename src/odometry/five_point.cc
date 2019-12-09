@@ -8,6 +8,7 @@
 #include "optimization/reprojection_error.h"
 #include "optimization/scale_parameterization.h"
 #include "camera/double_sphere.h"
+#include "camera/unified.h"
 #include "camera/perspective.h"
 
 namespace omni_slam
@@ -27,8 +28,18 @@ FivePoint::FivePoint(int ransac_iterations, double epipolar_threshold, int trans
 
 int FivePoint::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &cur_frame, const data::Frame &prev_frame, std::vector<int> &inlier_indices) const
 {
+    Matrix<double, 3, 4> poseTmp;
+    return Compute(landmarks, cur_frame, prev_frame, inlier_indices, poseTmp);
+}
+
+int FivePoint::Compute(const std::vector<data::Landmark> &landmarks, data::Frame &cur_frame, const data::Frame &prev_frame, std::vector<int> &inlier_indices, Matrix<double, 3, 4> &pose) const
+{
     Matrix3d E;
     int inliers = ComputeE(landmarks, prev_frame, cur_frame, E, inlier_indices);
+    if (inliers == 0)
+    {
+        return 0;
+    }
     std::vector<Matrix3d> rs;
     std::vector<Vector3d> ts;
     EssentialToPoses(E, rs, ts);
@@ -76,6 +87,11 @@ int FivePoint::Compute(const std::vector<data::Landmark> &landmarks, data::Frame
             bestIds = ids;
         }
     }
+    pose = bestPose;
+    if (bestXs.size() == 0)
+    {
+        return inliers;
+    }
     Vector3d tvec = bestPose.block<3, 1>(0, 3);
     Vector3d t = bestPose.block<3, 1>(0, 3);
     Matrix<double, 3, 4> estPose;
@@ -103,6 +119,7 @@ int FivePoint::Compute(const std::vector<data::Landmark> &landmarks, data::Frame
     }
     estPose.block<3, 1>(0, 3) = t;
     cur_frame.SetEstimatedInversePose(estPose, transInlierIds);
+    pose = estPose;
 
     return inliers;
 }
@@ -382,6 +399,10 @@ bool FivePoint::OptimizeTranslation(const std::vector<Vector3d> &xs, const std::
         else if (ys[i].first->GetFrame().GetCameraModel().GetType() == camera::CameraModel<>::kDoubleSphere)
         {
             cost_function = optimization::ReprojectionError<camera::DoubleSphere>::Create(*ys[i].first, *ys[i].second);
+        }
+        else if (ys[i].first->GetFrame().GetCameraModel().GetType() == camera::CameraModel<>::kUnified)
+        {
+            cost_function = optimization::ReprojectionError<camera::Unified>::Create(*ys[i].first, *ys[i].second);
         }
         if (cost_function != nullptr)
         {

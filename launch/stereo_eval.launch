@@ -19,8 +19,6 @@
             stereo_matcher_num_scales: 5
             stereo_matcher_error_threshold: 20
             stereo_matcher_epipolar_threshold: 0.008
-            stereo_tf_t: [2.0, 0.0, 0.0]
-            stereo_tf_r: [0.0, 0.0, 0.0, 1.0]
         </rosparam>
     </node>
     <rosparam command="load" file="$(arg camera_file)" ns="omni_slam_stereo_eval_node" />

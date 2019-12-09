@@ -32,7 +32,7 @@ public:
 
     template <typename U>
     DoubleSphere(const CameraModel<U> &other)
-        : DoubleSphere(T(static_cast<const DoubleSphere<U>&>(other).fx_), T(static_cast<const DoubleSphere<U>&>(other).fy_), T(static_cast<const DoubleSphere<U>&>(other).cx_), T(static_cast<const DoubleSphere<U>&>(other).cy_), T(static_cast<const DoubleSphere<U>&>(other).chi_), T(static_cast<const DoubleSphere<U>&>(other).alpha_))
+        : DoubleSphere(T(static_cast<const DoubleSphere<U>&>(other).fx_), T(static_cast<const DoubleSphere<U>&>(other).fy_), T(static_cast<const DoubleSphere<U>&>(other).cx_), T(static_cast<const DoubleSphere<U>&>(other).cy_), T(static_cast<const DoubleSphere<U>&>(other).chi_), T(static_cast<const DoubleSphere<U>&>(other).alpha_), T(static_cast<const DoubleSphere<U>&>(other).vignette_))
     {
     }
 
@@ -126,10 +126,12 @@ public:
             if (vignette_ > 0.)
             {
                 r2 = std::min(mx * mx * vignette_ * vignette_, 1. / (2. * alpha_ - 1.));
+                mx = sqrt(r2);
             }
             else
             {
                 r2 = 1. / (2. * alpha_ - 1.);
+                mx = sqrt(r2);
             }
         }
         else

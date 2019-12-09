@@ -78,6 +78,15 @@ template <bool Stereo>
 void ReconstructionEval<Stereo>::GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data)
 {
     module::ReconstructionModule::Stats &stats = reconstructionModule_->GetStats();
+    for (const data::Landmark &landmark : this->trackingModule_->GetLandmarks())
+    {
+        if (landmark.HasGroundTruth() && landmark.HasEstimatedPosition() && landmark.GetStereoObservations().size() == 0)
+        {
+            Vector3d gnd = landmark.GetGroundTruth();
+            Vector3d est = landmark.GetEstimatedPosition();
+            data["landmarks"].emplace_back(std::vector<double>{est(0), est(1), est(2), gnd(0), gnd(1), gnd(2), (double)landmark.GetNumFramesForEstimate()});
+        }
+    }
 }
 
 template <bool Stereo>

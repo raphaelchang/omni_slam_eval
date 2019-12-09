@@ -46,6 +46,7 @@ void StereoEval::ProcessFrame(unique_ptr<data::Frame> &&frame)
 void StereoEval::GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data)
 {
     module::StereoModule::Stats &stats = stereoModule_->GetStats();
+    data["depth_errors"] = stats.depthErrRadDists;
 }
 
 void StereoEval::Visualize(cv_bridge::CvImagePtr &base_img, cv_bridge::CvImagePtr &base_stereo_img)

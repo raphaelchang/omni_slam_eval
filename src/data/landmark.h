@@ -40,6 +40,7 @@ public:
     bool HasGroundTruth() const;
     bool HasEstimatedPosition() const;
     bool IsEstimatedByFrame(const int frame_id) const;
+    const int GetNumFramesForEstimate() const;
 
 private:
     const int id_;

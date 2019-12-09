@@ -27,6 +27,7 @@ void StereoModule::Update(data::Frame &frame, std::vector<data::Landmark> &landm
     {
         visualization_.Init(frame.GetImage().size());
     }
+    int imsize = max(frame.GetImage().rows, frame.GetImage().cols);
     for (data::Landmark &landmark : landmarks)
     {
         const data::Feature *feat1 = landmark.GetObservationByFrameID(frame.GetID());
@@ -39,6 +40,10 @@ void StereoModule::Update(data::Frame &frame, std::vector<data::Landmark> &landm
             {
                 double depthGnd = (landmark.GetGroundTruth() - frame.GetPose().block<3, 1>(0, 3)).norm();
                 visualization_.AddMatch(feat1->GetKeypoint().pt, feat2->GetKeypoint().pt, depth, std::abs(depth - depthGnd) / depthGnd);
+                double x = feat1->GetKeypoint().pt.x - frame.GetImage().cols / 2. + 0.5;
+                double y = feat1->GetKeypoint().pt.y - frame.GetImage().rows / 2. + 0.5;
+                double r = sqrt(x * x + y * y) / imsize;
+                stats_.depthErrRadDists.emplace_back(vector<double>{r, cv::norm(feat2->GetKeypoint().pt - feat1->GetKeypoint().pt), std::abs(depth - depthGnd) / (depthGnd * depthGnd)});
             }
             else
             {

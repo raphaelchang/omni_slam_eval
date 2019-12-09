@@ -104,6 +104,18 @@ void OdometryEval<Stereo>::ProcessFrame(unique_ptr<data::Frame> &&frame)
 template <bool Stereo>
 void OdometryEval<Stereo>::Finish()
 {
+    bool first = true;
+    for (const std::unique_ptr<data::Frame> &frame : this->trackingModule_->GetFrames())
+    {
+        if (frame->HasEstimatedPose() || first)
+        {
+            const Matrix<double, 3, 4> &pose = (first && !frame->HasEstimatedPose()) ? frame->GetPose() : frame->GetEstimatedPose();
+            Quaterniond quat(pose.block<3, 3>(0, 0));
+            quat.normalize();
+            odometryData_.emplace_back(std::vector<double>{pose(0, 3), pose(1, 3), pose(2, 3), quat.x(), quat.y(), quat.z(), quat.w()});
+        }
+        first = false;
+    }
     ROS_INFO("Performing bundle adjustment...");
     odometryModule_->BundleAdjust(this->trackingModule_->GetLandmarks());
     PublishOdometry(true);
@@ -113,6 +125,9 @@ template <bool Stereo>
 void OdometryEval<Stereo>::GetResultsData(std::map<std::string, std::vector<std::vector<double>>> &data)
 {
     module::OdometryModule::Stats &stats = odometryModule_->GetStats();
+    data["inlier_radial_distances"] = stats.inlierRadDists;
+    data["outlier_radial_distances"] = stats.outlierRadDists;
+    data["estimated_poses"] = odometryData_;
     bool first = true;
     for (const std::unique_ptr<data::Frame> &frame : this->trackingModule_->GetFrames())
     {
@@ -121,7 +136,7 @@ void OdometryEval<Stereo>::GetResultsData(std::map<std::string, std::vector<std:
             const Matrix<double, 3, 4> &pose = (first && !frame->HasEstimatedPose()) ? frame->GetPose() : frame->GetEstimatedPose();
             Quaterniond quat(pose.block<3, 3>(0, 0));
             quat.normalize();
-            data["estimated_poses"].emplace_back(std::vector<double>{pose(0, 3), pose(1, 3), pose(2, 3), quat.x(), quat.y(), quat.z(), quat.w()});
+            data["bundle_adjusted_poses"].emplace_back(std::vector<double>{pose(0, 3), pose(1, 3), pose(2, 3), quat.x(), quat.y(), quat.z(), quat.w()});
         }
         if (frame->HasPose())
         {

@@ -24,6 +24,8 @@ class OdometryModule
 public:
     struct Stats
     {
+        std::vector<std::vector<double>> inlierRadDists;
+        std::vector<std::vector<double>> outlierRadDists;
     };
 
     OdometryModule(std::unique_ptr<odometry::PoseEstimator> &pose_estimator, std::unique_ptr<optimization::BundleAdjuster> &bundle_adjuster);
@@ -39,6 +41,8 @@ private:
     std::shared_ptr<optimization::BundleAdjuster> bundleAdjuster_;
 
     Stats stats_;
+
+    int frameNum_{0};
 };
 
 }

@@ -18,6 +18,7 @@ public:
     FivePoint(int ransac_iterations, double epipolar_threshold, int trans_ransac_iterations, double reprojection_threshold, bool fix_translation_vector, int num_ceres_threads = 1);
 
     int Compute(const std::vector<data::Landmark> &landmarks, data::Frame &cur_frame, const data::Frame &prev_frame, std::vector<int> &inlier_indices) const;
+    int Compute(const std::vector<data::Landmark> &landmarks, data::Frame &cur_frame, const data::Frame &prev_frame, std::vector<int> &inlier_indices, Matrix<double, 3, 4> &pose) const;
     int ComputeE(const std::vector<data::Landmark> &landmarks, const data::Frame &frame1, const data::Frame &frame2, Matrix3d &E, std::vector<int> &inlier_indices, bool stereo = false) const;
 
 private:

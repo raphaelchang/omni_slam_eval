@@ -23,6 +23,7 @@ class StereoModule
 public:
     struct Stats
     {
+        std::vector<std::vector<double>> depthErrRadDists;
     };
 
     StereoModule(std::unique_ptr<stereo::StereoMatcher> &stereo);
